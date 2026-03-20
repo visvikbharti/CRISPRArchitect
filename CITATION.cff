@@ -3,9 +3,16 @@ title: "CRISPRArchitect: A Computational Platform for Multi-Site Genome Editing 
 message: "If you use CRISPRArchitect in your research, please cite it using these metadata."
 type: software
 license: MIT
-repository-code: "https://github.com/crisprarchitect/crisprarchitect"
+repository-code: "https://github.com/visvikbharti/CRISPRArchitect"
 version: 0.1.0
 date-released: "2026-03-20"
+authors:
+  - family-names: Bharti
+    given-names: Vishal
+    affiliation: "CSIR-Institute of Genomics and Integrative Biology (IGIB), New Delhi, India"
+  - family-names: Chakraborty
+    given-names: Debojyoti
+    affiliation: "CSIR-Institute of Genomics and Integrative Biology (IGIB), New Delhi, India; Academy of Scientific and Innovative Research (AcSIR), Ghaziabad, India"
 keywords:
   - CRISPR
   - genome-editing

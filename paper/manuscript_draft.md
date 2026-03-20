@@ -4,10 +4,11 @@
 
 ## Authors
 
-Vishal Bharti [1, *]
+Vishal Bharti [1, *] and Debojyoti Chakraborty [1, 2, *]
 
-[1] [Your Institution]
-[*] Corresponding author
+[1] CSIR-Institute of Genomics and Integrative Biology (IGIB), New Delhi, 110025, India
+[2] Academy of Scientific and Innovative Research (AcSIR), Ghaziabad, 201002, India
+[*] Corresponding authors
 
 ---
 
