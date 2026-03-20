@@ -35,9 +35,9 @@ jobs:
 
       - name: Check imports
         run: |
-          python -c "import crisprarchitect; print(f'Version: {crisprarchitect.__version__}')"
-          python -c "from crisprarchitect.conversion_sim import ConversionSimulator; print('ConversionSim OK')"
-          python -c "from crisprarchitect.mosaic.gene_structure import GeneStructure; print('MOSAIC OK')"
-          python -c "from crisprarchitect.topopred import DonorAnalyzer; print('TopoPred OK')"
-          python -c "from crisprarchitect.chrombridge import ChromatinDistancePredictor; print('ChromBridge OK')"
-          python -c "from crisprarchitect.loopsim import LoopSimulator; print('LoopSim OK')"
+          cd ${{ github.workspace }}
+          python -c "from conversion_sim import ConversionSimulator; print('ConversionSim OK')"
+          python -c "from mosaic.gene_structure import GeneStructure; print('MOSAIC OK')"
+          python -c "from topopred import DonorAnalyzer; print('TopoPred OK')"
+          python -c "from chrombridge import ChromatinDistancePredictor; print('ChromBridge OK')"
+          python -c "from loopsim import LoopSimulator; print('LoopSim OK')"
