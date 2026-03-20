@@ -20,15 +20,11 @@ E-mail: vishalvikashbharti@gmail.com (VB); debojyoti.chakraborty@igib.in (DC)
 
 # ABSTRACT
 
-(max 300 words; unstructured; no citations; no abbreviations first use)
-
 Correcting multiple pathogenic mutations in large multi-exon genes using CRISPR-based technologies requires choosing among several editing modalities, including homology-directed repair with various donor formats, base editing, and prime editing. This decision is consequential in human induced pluripotent stem cells, where double-strand breaks trigger p53-dependent apoptosis, yet it is currently guided by intuition rather than quantitative analysis. Here we present a computational framework with two components. The first, ConversionSim, models homology-directed repair as a four-step stochastic process — end resection, RAD51 filament formation, strand invasion, and synthesis-dependent strand annealing — to predict gene conversion tract length distributions and the probability of incorporating donor-encoded edits at various distances from the double-strand break. The second, MOSAIC, enumerates all feasible editing strategies for a given multi-site correction problem and ranks them by predicted efficiency, safety, time, and cost. We calibrated ConversionSim using parameters from independent published studies and validated it against four experimental datasets. The model correctly predicted the approximately two-fold enhancement of circular over linear single-stranded DNA donors (predicted 2.07-fold versus observed 1.5-2.1-fold) and the enhancement from staggered nuclease cuts (predicted 1.82-fold versus observed 1.4-2.8-fold). It also revealed a systematic discrepancy for short oligonucleotide donors, attributable to the single-strand template repair pathway not captured by our synthesis-dependent strand annealing model. We benchmarked MOSAIC against strategies employed in 14 published genome editing studies, finding 71 percent concordance with expert decisions and complete agreement for base editing applications. The framework, available as open-source software, provides the first quantitative tool for comparing editing modalities in multi-site correction scenarios.
 
 ---
 
 # AUTHOR SUMMARY
-
-(150-200 words; written for non-specialist scientists)
 
 When patients carry two or more mutations in a single gene, correcting them using genome editing is not straightforward. Researchers must decide: should each mutation be fixed separately or simultaneously? Should they use traditional cut-and-paste repair, or newer approaches like base editing that change single DNA letters without cutting both strands? These choices matter enormously in patient-derived stem cells, where DNA cuts can trigger cell death.
 
@@ -174,7 +170,7 @@ where *η_cell* is the cell-type base HDR rate, *m_topology* is a donor topology
 
 *p_eff* = *p_base* × *m_topo* × *m_stagger*
 
-*p_base* = 0.002 per bp (calibrated to produce median tracts of approximately 350 bp). For circular ssDNA donors, *m_topo* = 0.80; for staggered cuts, *m_stagger* = 0.85. Tracts are clipped to [50, 5000] bp.
+*p_base* = 0.002 per bp (producing baseline median tracts of approximately 350 bp before donor topology and stagger modifiers are applied; with cssDNA and staggered cuts, the effective median increases to approximately 540 bp). For circular ssDNA donors, *m_topo* = 0.80; for staggered cuts, *m_stagger* = 0.85. Tracts are clipped to [50, 5000] bp.
 
 All parameter values and their literature sources are provided in S1 Table.
 
