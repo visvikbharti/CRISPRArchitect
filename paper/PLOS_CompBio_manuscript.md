@@ -230,7 +230,7 @@ CRISPRArchitect (version 0.1.0) is implemented in Python (compatible with versio
 
 6. Iyer S, Mir A, Vega-Badillo J, Roscoe BP, Ibraheim R, Zhu LJ, et al. Efficient homology-directed repair with circular single-stranded DNA donors. CRISPR J. 2022;5:685-701.
 
-7. Xie K, Starzyk J, Majumdar I, et al. Efficient non-viral immune cell engineering using circular single-stranded DNA-mediated genomic integration. Nat Biotechnol. 2025;43:1821-1832.
+7. Xie K, Starzyk J, Majumdar I, Xiao K, Pham T, Wang YH, et al. Efficient non-viral immune cell engineering using circular single-stranded DNA-mediated genomic integration. Nat Biotechnol. 2025;43:1821-1832.
 
 8. Chauhan VP, Sharp PA, Langer R. Altered DNA repair pathway engagement by engineered CRISPR-Cas9 nucleases. Proc Natl Acad Sci USA. 2023;120:e2300605120.
 
@@ -242,11 +242,11 @@ CRISPRArchitect (version 0.1.0) is implemented in Python (compatible with versio
 
 12. Elliott B, Richardson C, Winderbaum J, Nickoloff JA, Jasin M. Gene conversion tracts from double-strand break repair in mammalian cells. Mol Cell Biol. 1998;18:93-101.
 
-13. Paquet D, Kwart D, Chen A, Bhatt S, et al. Efficient introduction of specific homozygous and heterozygous mutations using CRISPR/Cas9. Nature. 2016;533:125-129.
+13. Paquet D, Kwart D, Chen A, Sproul A, Jacob S, Teo S, et al. Efficient introduction of specific homozygous and heterozygous mutations using CRISPR/Cas9. Nature. 2016;533:125-129.
 
-14. Symington LS. Mechanism and regulation of DNA end resection in eukaryotes. Crit Rev Biochem Mol Biol. 2011;46:67-82.
+14. Symington LS. Mechanism and regulation of DNA end resection in eukaryotes. Crit Rev Biochem Mol Biol. 2016;51:195-212.
 
-15. Cejka P. DNA end resection: nucleases team up with the right partners to initiate homologous recombination. Annu Rev Genet. 2015;49:399-420.
+15. Cejka P. DNA end resection: nucleases team up with the right partners to initiate homologous recombination. J Biol Chem. 2015;290:22931-22938.
 
 16. Jensen RB, Carreira A, Kowalczykowski SC. Purified human BRCA2 stimulates RAD51-mediated recombination. Nature. 2010;467:678-683.
 
@@ -254,13 +254,13 @@ CRISPRArchitect (version 0.1.0) is implemented in Python (compatible with versio
 
 18. Renkawitz J, Lademann CA, Jentsch S. Mechanisms and principles of homology search during recombination. Nat Rev Mol Cell Biol. 2014;15:369-383.
 
-19. Kan Y, Ruis B, Taber S, Hendrickson EA. Mechanisms of precise genome editing using oligonucleotide donors. Genome Res. 2017;27:1099-1111.
+19. Kan Y, Ruis B, Takasugi T, Hendrickson EA. Mechanisms of precise genome editing using oligonucleotide donors. Genome Res. 2017;27:1099-1111.
 
 20. Gallagher DN, Haber JE. Repair of a site-specific DNA cleavage: old-school lessons for Cas9-mediated gene editing. ACS Chem Biol. 2018;13:397-405.
 
 21. Frock RL, Hu J, Meyers RM, Ho YJ, Kii E, Alt FW. Genome-wide detection of DNA double-stranded breaks induced by engineered nucleases. Nat Biotechnol. 2015;33:179-186.
 
-22. Aymard F, Bugler B, Schmidt CK, Guillou E, Clapier P, et al. Transcriptionally active chromatin recruits homologous recombination at DNA double-strand breaks. Nat Struct Mol Biol. 2014;21:366-374.
+22. Aymard F, Bugler B, Schmidt CK, Guillou E, Caron P, et al. Transcriptionally active chromatin recruits homologous recombination at DNA double-strand breaks. Nat Struct Mol Biol. 2014;21:366-374.
 
 ---
 
