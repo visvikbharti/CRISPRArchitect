@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+title: "CRISPRArchitect: A Computational Platform for Multi-Site Genome Editing Strategy Optimization"
+message: "If you use CRISPRArchitect in your research, please cite it using these metadata."
+type: software
+license: MIT
+repository-code: "https://github.com/crisprarchitect/crisprarchitect"
+version: 0.1.0
+date-released: "2026-03-20"
+keywords:
+  - CRISPR
+  - genome-editing
+  - HDR
+  - iPSC
+  - cssDNA
+  - base-editing
+  - prime-editing
+  - bioinformatics
+  - computational-biology
+  - gene-therapy

@@ -1,0 +1,9 @@
+[theme]
+# CRISPRArchitect — uses Streamlit's built-in theme toggle
+# Users switch between light/dark via Settings menu (hamburger > Settings > Theme)
+# We only set the accent color; base theme follows user preference.
+primaryColor = "#2196F3"
+
+[server]
+port = 8501
+headless = true
