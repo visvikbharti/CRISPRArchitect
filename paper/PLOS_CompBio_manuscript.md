@@ -288,6 +288,28 @@ CRISPRArchitect (version 0.1.0) is implemented in Python (compatible with versio
 
 ---
 
+# AUTHOR CONTRIBUTIONS
+
+Conceptualization: VB. Software: VB. Validation: VB. Formal analysis: VB. Writing – original draft: VB. Writing – review & editing: VB, DC. Supervision: DC. Funding acquisition: DC.
+
+---
+
+# FUNDING
+
+This work was supported by [CSIR grant number(s) to be added by authors]. VB acknowledges [fellowship details to be added]. The funders had no role in study design, data collection and analysis, decision to publish, or preparation of the manuscript.
+
+---
+
+# COMPETING INTERESTS
+
+The authors declare no competing interests.
+
+---
+
+# DATA AVAILABILITY STATEMENT
+
+All source code, validation scripts, parameter files, and analysis pipelines are available at https://github.com/visvikbharti/CRISPRArchitect under the MIT license. The repository includes a Docker container for reproducible deployment. All gene coordinates were obtained from the Ensembl REST API (GRCh38 assembly). No novel experimental data were generated in this study; all validation comparisons use data from previously published studies cited in the manuscript.
+
+---
+
 *Manuscript prepared for PLOS Computational Biology, Research Article format.*
-*All citations require verification against original publications before submission.*
-*Figures to be generated from validation scripts in the repository.*
