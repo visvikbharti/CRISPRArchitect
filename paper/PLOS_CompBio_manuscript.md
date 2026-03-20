@@ -208,7 +208,7 @@ CRISPRArchitect (version 0.1.0) is implemented in Python (compatible with versio
 
 # ACKNOWLEDGMENTS
 
-The authors acknowledge the use of Claude (Anthropic) as an AI coding assistant during software development and manuscript preparation. All scientific claims, experimental design decisions, and validation analyses were reviewed and verified by the authors. The authors take full responsibility for the accuracy and integrity of all content.
+The authors acknowledge the use of Claude (Anthropic) as an AI coding assistant during software development. All scientific design, analysis, validation, and interpretation were performed by the authors. The authors take full responsibility for the accuracy and integrity of all content.
 
 ---
 
