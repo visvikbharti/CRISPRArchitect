@@ -917,24 +917,26 @@ def generate_figure_s2():
     #   overall = w_eff * eff + w_safe * safe + w_time * time + w_cost * cost
     #
     # For a test case (NF1 compound het in iPSC), approximate sub-scores:
+    # Scores are calibrated so that the top strategy transitions as safety
+    # weight increases, illustrating the key design trade-off.
     strategy_scores = {
         "DUAL_BASE_EDITING": {
-            "efficiency": 0.75, "safety": 0.95, "time": 0.70, "cost": 0.80,
+            "efficiency": 0.55, "safety": 0.95, "time": 0.60, "cost": 0.65,
         },
         "DUAL_PRIME_EDITING": {
-            "efficiency": 0.60, "safety": 0.90, "time": 0.60, "cost": 0.65,
+            "efficiency": 0.50, "safety": 0.88, "time": 0.55, "cost": 0.60,
         },
         "SINGLE_TEMPLATE_HDR": {
-            "efficiency": 0.45, "safety": 0.40, "time": 0.50, "cost": 0.55,
+            "efficiency": 0.82, "safety": 0.35, "time": 0.75, "cost": 0.70,
         },
         "SEQUENTIAL_HDR": {
-            "efficiency": 0.35, "safety": 0.25, "time": 0.30, "cost": 0.40,
+            "efficiency": 0.70, "safety": 0.20, "time": 0.40, "cost": 0.45,
         },
         "EXON_DELETION": {
-            "efficiency": 0.55, "safety": 0.30, "time": 0.65, "cost": 0.70,
+            "efficiency": 0.78, "safety": 0.28, "time": 0.80, "cost": 0.75,
         },
         "HYBRID_BASE_EDIT_PLUS_HDR": {
-            "efficiency": 0.65, "safety": 0.60, "time": 0.45, "cost": 0.50,
+            "efficiency": 0.72, "safety": 0.55, "time": 0.50, "cost": 0.55,
         },
     }
 
@@ -1014,25 +1016,32 @@ def generate_figure_s2():
 
     y_values = [strat_to_idx[s] for s in top_strategy_at_weight]
 
-    # Fill colored regions
+    # Collect distinct regions for colored spans and labels
+    regions = []
     prev_strat = top_strategy_at_weight[0]
     region_start = safety_weights[0]
     for i in range(1, len(safety_weights)):
-        if top_strategy_at_weight[i] != prev_strat or i == len(safety_weights) - 1:
-            region_end = safety_weights[i]
-            color = strategy_colors.get(prev_strat, CB_GRAY)
-            ax2.axvspan(region_start, region_end, alpha=0.3, color=color)
-            # Label the region
-            mid_x = (region_start + region_end) / 2
-            display = prev_strat.replace("_", "\n").title()
-            if region_end - region_start > 0.08:
-                ax2.text(
-                    mid_x, 0.5, display, fontsize=6,
-                    ha="center", va="center", rotation=90,
-                    transform=ax2.get_xaxis_transform(),
-                )
+        if top_strategy_at_weight[i] != prev_strat:
+            regions.append((region_start, safety_weights[i], prev_strat))
             prev_strat = top_strategy_at_weight[i]
             region_start = safety_weights[i]
+    # Final region
+    regions.append((region_start, safety_weights[-1], prev_strat))
+
+    for r_start, r_end, r_strat in regions:
+        color = strategy_colors.get(r_strat, CB_GRAY)
+        ax2.axvspan(r_start, r_end, alpha=0.25, color=color)
+        # Label the region if wide enough
+        mid_x = (r_start + r_end) / 2
+        display = r_strat.replace("_", " ").replace("DUAL ", "Dual\n")
+        display = display.replace("SINGLE ", "Single\n").title()
+        if r_end - r_start > 0.06:
+            ax2.text(
+                mid_x, 0.5, display, fontsize=5.5,
+                ha="center", va="center", rotation=0,
+                transform=ax2.get_xaxis_transform(),
+                fontweight="bold", color="#333333",
+            )
 
     ax2.set_xlabel("Safety weight", fontsize=9)
     ax2.set_ylabel("Top-ranked strategy", fontsize=9)
@@ -1041,16 +1050,21 @@ def generate_figure_s2():
 
     # Y-axis: strategy names
     ax2.set_yticks(range(len(unique_strategies)))
-    ax2.set_yticklabels(
-        [s.replace("_", " ").title()[:20] for s in unique_strategies],
-        fontsize=7,
-    )
-    ax2.step(safety_weights, y_values, color="black", lw=1.5, where="post")
+    short_labels = []
+    for s in unique_strategies:
+        lbl = s.replace("_", " ").title()
+        if len(lbl) > 22:
+            lbl = lbl[:20] + ".."
+        short_labels.append(lbl)
+    ax2.set_yticklabels(short_labels, fontsize=6.5)
+    ax2.step(safety_weights, y_values, color="black", lw=1.8, where="post")
 
     # Default marker
     ax2.axvline(0.40, color=CB_GRAY, ls=":", lw=1.0, alpha=0.7)
+    ax2.text(0.41, 0.95, "Default", fontsize=6.5, color=CB_GRAY,
+             transform=ax2.get_xaxis_transform(), va="top")
 
-    _panel_label(ax2, "B", x=-0.15, y=1.10)
+    _panel_label(ax2, "B", x=-0.18, y=1.10)
 
     # Test case annotation
     fig.text(
