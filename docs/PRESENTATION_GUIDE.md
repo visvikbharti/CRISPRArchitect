@@ -401,6 +401,249 @@ For publication, we're targeting PLOS Computational Biology as a Research Articl
 
 ---
 
+## TECHNICAL ARCHITECTURE, DATABASE, & API QUESTIONS
+
+These questions typically come from bioinformaticians, computational biologists, or committee members with a CS/engineering background. They'll want to know HOW the tool works under the hood.
+
+---
+
+### Q16: "What is the overall software architecture? How are the modules connected?"
+
+**A:** "CRISPRArchitect uses a modular flat-package architecture in Python. There are 6 independent modules — ConversionSim, MOSAIC, TopoPred, ChromBridge, LoopSim, and a web interface — plus a shared utilities layer.
+
+The modules are designed to work independently OR together. For example, you can use ConversionSim alone to simulate tract lengths, or MOSAIC can internally call ConversionSim to check if single-template HDR is feasible.
+
+The data flow is:
+```
+User Input (gene, mutations, cell type, nuclease)
+    ↓
+Gene Structure (from Ensembl API or manual input)
+    ↓
+MOSAIC (enumerates + scores strategies)
+    ├── calls ConversionSim (checks tract reach)
+    ├── calls ChromBridge (checks 3D distance, translocation risk)
+    └── outputs ranked strategies
+    ↓
+User picks strategy → TopoPred checks donor quality
+```
+
+There's no central database. All biological parameters are in a single file (`utils/constants.py`) with literature citations for every number. This makes the tool transparent and auditable — you can trace every prediction back to a published measurement."
+
+### Q17: "What databases or external data sources does this tool use?"
+
+**A:** "We use only ONE external data source: the **Ensembl REST API** (rest.ensembl.org) to fetch gene structures and sequences from GRCh38. This is a public, free API that requires no authentication.
+
+What we fetch:
+- Gene coordinates (chromosome, start, end, strand)
+- Canonical transcript exon coordinates
+- Genomic DNA sequence for donor design
+
+What we do NOT use:
+- No local genome database (no need to download the 3 GB GRCh38 FASTA)
+- No Hi-C data files (ChromBridge uses a polymer physics model instead)
+- No ChIP-seq data (LoopSim estimates CTCF positions)
+- No proprietary databases
+
+Everything runs with just an internet connection for the Ensembl fetch. The core simulations work entirely offline — all parameters are hardcoded from published literature."
+
+### Q18: "Why did you use the Ensembl REST API instead of downloading the genome locally?"
+
+**A:** "Three reasons:
+1. **Simplicity** — Users don't need to download or manage a 3 GB genome file. One API call gets the exon coordinates for any gene in seconds.
+2. **Always up-to-date** — Ensembl updates annotations regularly. By using the API, we always get the latest gene models.
+3. **We only need annotations, not sequences** — For the core analysis (MOSAIC, ConversionSim, ChromBridge), we need exon START and END positions, not the actual DNA bases. The only time we need real sequence is for donor design in TopoPred, and even then it's just a few hundred bases around one exon.
+
+The API call looks like:
+```
+GET https://rest.ensembl.org/lookup/symbol/homo_sapiens/NF1?expand=1
+```
+This returns JSON with all exon coordinates for the canonical transcript. Response time is typically 1-3 seconds."
+
+### Q19: "Why Streamlit for the web interface? Why not Flask/Django/React?"
+
+**A:** "Pragmatic choice. Streamlit lets us build a 7-page interactive web app in ~1,700 lines of Python — no HTML, CSS, or JavaScript needed. For a scientific tool where the VALUE is in the algorithms, not the UI, Streamlit is the right trade-off: fast to build, easy to maintain, and the science is identical regardless of the web framework.
+
+That said, we also provide:
+- A **CLI** (`python cli.py analyze --gene NF1 ...`) for scriptable use
+- A **Docker container** for reproducible deployment on any server
+- Direct **Python API** for integration into other pipelines
+
+If the tool gains significant community adoption, migrating to a more polished framework (FastAPI + React) would be straightforward because the backend logic is completely decoupled from the web layer."
+
+### Q20: "How does the Monte Carlo simulation work technically? What are the computational costs?"
+
+**A:** "Each ConversionSim run performs N independent simulations (default 10,000, we use 50,000 for publication figures). Each simulation draws random numbers for:
+1. Resection length (Normal + LogNormal distributions)
+2. RAD51 coverage (Beta distribution)
+3. Invasion probability (Bernoulli based on calculated probability)
+4. Tract length (Geometric distribution)
+
+Critically, ALL simulations are vectorized using NumPy — we operate on arrays of 10,000 values, not 10,000 individual trials in a Python for-loop. This means:
+- 10,000 simulations: ~50 milliseconds
+- 50,000 simulations: ~200 milliseconds
+- 100,000 simulations: ~400 milliseconds
+
+It's essentially instant. The simulation is not the bottleneck — the Ensembl API call (1-3 seconds) is slower than any computation we do.
+
+Memory usage: ~1 MB per 10,000 simulations (storing arrays of resection lengths, tract lengths, etc.). Negligible."
+
+### Q21: "How is the LoopSim cohesin simulation different from existing loop extrusion models?"
+
+**A:** "Existing loop extrusion models — like those from Fudenberg et al. (2016) and Sanborn et al. (2015) — simulate cohesin during normal interphase to predict Hi-C contact maps and TAD structures. They model steady-state loop extrusion across the genome.
+
+LoopSim is different in three ways:
+1. **It models damage-induced loop extrusion** — cohesin loaded at a DSB, not during normal cell cycle. Based on Arnould et al. (2021, Nature) and Marin-Gonzalez et al. (2025, Science).
+2. **The anchor point is the DSB** — cohesin is fixed at the break site and extrudes chromatin bidirectionally from there.
+3. **The output is a 'search domain'** — the genomic region reeled through the DSB, which is scanned by RAD51 for homology.
+
+The simulation is a 1D stochastic lattice model: each bead = 1 kb of chromatin, cohesin advances at ~1 kb/sec, stalls at CTCF sites with probability 0.8. We run 500-1,000 independent simulations to get the distribution of search domain sizes.
+
+But I should be honest: LoopSim is the most speculative module. We don't have direct experimental data to calibrate the search domain predictions. We include it because the biology is fascinating and the 2025 Science paper is groundbreaking, but its practical utility for exogenous donor experiments is limited."
+
+### Q22: "What polymer physics model does ChromBridge use? How accurate is it?"
+
+**A:** "ChromBridge uses a **confined Gaussian chain model** for chromatin. The key equations:
+
+For a Gaussian chain (no confinement):
+```
+⟨R²⟩ = N × b²
+```
+where N = number of Kuhn segments (genomic_distance / 30,000 bp) and b = Kuhn length (300 nm for chromatin in euchromatin).
+
+With confinement (chromosome territory):
+```
+⟨R²⟩_confined = R²_max × (1 − exp(−⟨R²⟩_free / R²_max))
+```
+This creates a plateau at large distances — loci on the same chromosome can't be further apart than the territory diameter (~4 μm).
+
+For the donor template coil size, we use the **freely jointed chain** model for ssDNA:
+```
+R_g = √(L × l_k / 6)
+```
+where L = contour length and l_k = Kuhn length for ssDNA (1.5 nm).
+
+**Accuracy:** The model reproduces the qualitative relationship from FISH data (Yokota et al., 1995) and the Hi-C power-law decay (Lieberman-Aiden et al., 2009). For ORDER-OF-MAGNITUDE distance estimates, it's reliable. For precise distances at specific loci, you'd need actual Hi-C data for your cell type, which we don't use.
+
+The bridgeability analysis — comparing donor coil diameter to inter-locus distance — is on solid physical ground. A 261 nm coil genuinely cannot span a 1,133 nm gap. That's basic physics, not model-dependent."
+
+### Q23: "Why didn't you use actual Hi-C data instead of a polymer model?"
+
+**A:** "Good question. We could integrate published Hi-C data (e.g., Rao et al. 2014, available from 4D Nucleome) to get cell-type-specific contact frequencies and more accurate distance estimates. We chose not to for v0.1 because:
+
+1. **Hi-C data adds a large dependency** — the data files are gigabytes, require specialized processing tools (cooler, hic-straw), and are cell-type-specific. Most users don't have Hi-C data for their specific iPSC line.
+2. **The polymer model is sufficient for the key question** — whether a donor can bridge two distant loci. At the distances we're talking about (100 kb+), the answer is always NO, regardless of whether you use a polymer model or Hi-C data.
+3. **Adding Hi-C is a natural extension** — it's in our roadmap for v0.2, where we would use Hi-C to improve translocation risk predictions and TAD boundary analysis.
+
+For now, the polymer model gives correct qualitative answers with zero data dependencies."
+
+### Q24: "How do you handle the secondary structure prediction in TopoPred without ViennaRNA?"
+
+**A:** "We implemented a simplified energy model instead of depending on ViennaRNA, for two reasons: (1) ViennaRNA is a C library that can be difficult to install across platforms, and we wanted zero-hassle installation; (2) for our specific use case — checking whether homology arms are sequestered in structures — a simplified model is adequate.
+
+Our hairpin prediction uses:
+- **Nearest-neighbor energy model**: GC base pair stack = −2.0 kcal/mol, AT = −1.0 kcal/mol
+- **Loop penalty**: 4.0 + 1.4 × ln(loop_length) kcal/mol (Jacobson-Stockmayer approximation)
+- **Minimum stem**: 4 bp; **minimum loop**: 3 nt
+
+Our G-quadruplex detection uses:
+- **Regex scan**: G₃₊N₁₋₇G₃₊N₁₋₇G₃₊N₁₋₇G₃₊ on both strands
+- **Stability scoring**: weighted by tetrad count and loop lengths
+
+This is less accurate than ViennaRNA's full dynamic programming algorithm, but it catches the major structures that would impair HDR. We flag this limitation in the paper and suggest ViennaRNA for researchers who need rigorous predictions."
+
+### Q25: "What is the test coverage? How do you ensure correctness?"
+
+**A:** "We have 30 unit tests covering all 6 modules plus the Ensembl integration. The tests check:
+
+- **Biological plausibility**: resection lengths in the right range? Tract lengths right-skewed? HDR rate in iPSCs < HEK293T?
+- **Monotonicity**: P(tract reaching distance) decreases with distance? 3D distance increases with genomic distance?
+- **Boundary conditions**: 1 Mb sites unreachable by HDR? G4 motifs detected in known G-rich sequences?
+- **API correctness**: NF1 fetched from Ensembl has >50 exons on chr17?
+
+We run these on Python 3.9 through 3.12 via GitHub Actions CI on every push. All 30 tests pass in ~5 seconds.
+
+We DON'T have tests for the web interface (no Selenium/Playwright tests) or for edge cases in the scoring weights. These are areas for improvement."
+
+### Q26: "How reproducible are the results? If I run it twice, do I get the same numbers?"
+
+**A:** "The Monte Carlo simulations use NumPy's random number generator. By default, each run uses a different random seed, so you'll get slightly different numbers — but with 10,000+ simulations, the statistics (mean, median, percentiles) are very stable (typically <2% variation between runs).
+
+For exact reproducibility, you can set a seed:
+```python
+sim = ConversionSimulator(..., seed=42)
+```
+This produces identical results every time. Our validation scripts and figure generation all use fixed seeds for reproducibility.
+
+The MOSAIC strategy ranking is deterministic — no randomness involved. Same inputs always produce the same ranking."
+
+### Q27: "Can this be extended to other organisms? Or is it human-specific?"
+
+**A:** "The core algorithms (ConversionSim, MOSAIC scoring) are organism-agnostic — they work with any cell type where you have HDR rate estimates. The Ensembl API supports all species in Ensembl (mouse, zebrafish, Drosophila, C. elegans, etc.), so gene fetching works for any organism.
+
+What IS human-specific:
+- The cell type parameters (iPSC, HEK293T, etc.) — you'd need to add parameters for mouse ES cells, zebrafish embryos, etc.
+- The CTCF spacing estimates in LoopSim
+- The nuclear diameter and chromosome territory size in ChromBridge
+
+Adding a new organism is straightforward: add cell type parameters to `constants.py` and pass the species name to the Ensembl fetch function."
+
+### Q28: "What is the Docker container for? Who would use that?"
+
+**A:** "Docker packages the entire application — Python, all dependencies, the web interface — into a single container that runs identically on any machine. Three use cases:
+
+1. **Reviewers**: A PLOS reviewer can run `docker run -p 8501:8501 crisprarchitect` and test the tool without installing anything. This is critical for reproducibility review.
+
+2. **Institutional deployment**: A core facility could host CRISPRArchitect on their internal server so all lab members access it via a web URL, without individual Python installations.
+
+3. **Reproducibility**: The Docker image pins exact versions of all dependencies, guaranteeing the same results years later, even if NumPy or Streamlit update their APIs.
+
+The Dockerfile is a standard Python 3.11 slim image, about 500 MB total. Build with `docker build -t crisprarchitect .` and run with `docker run -p 8501:8501 crisprarchitect`."
+
+### Q29: "How would you integrate this with a laboratory workflow? LIMS?"
+
+**A:** "Currently CRISPRArchitect is standalone. Integration with a LIMS (Laboratory Information Management System) would require an API layer, which is straightforward:
+
+1. **FastAPI wrapper**: Expose ConversionSim and MOSAIC as REST endpoints. Input: JSON with gene/mutations. Output: JSON with ranked strategies and predictions.
+2. **Webhook**: LIMS sends a gene editing request → CRISPRArchitect returns recommended strategy → LIMS records the recommendation.
+
+This is in our long-term roadmap but not in v0.1. For now, the web interface and CLI serve as the primary access points."
+
+### Q30: "What happens if the Ensembl API is down or the gene isn't found?"
+
+**A:** "The tool handles this gracefully:
+- **API timeout** (30 seconds): Shows an error message 'Cannot connect to Ensembl REST API. Check your internet connection.'
+- **Gene not found**: Shows 'Gene not found or invalid request' with the attempted URL.
+- **No canonical transcript**: Falls back to the transcript with the most exons.
+- **No exons found**: Shows 'No exons found for gene X. This may be a non-coding gene or pseudogene.'
+
+Importantly, the core simulations (ConversionSim, MOSAIC, ChromBridge) work entirely offline once you have exon coordinates. You can enter coordinates manually or from a CSV file, bypassing Ensembl entirely. The API is a convenience, not a dependency."
+
+### Q31: "Is there any machine learning in this tool?"
+
+**A:** "No, deliberately. We use mechanistic models (physics-based simulation) rather than ML for three reasons:
+
+1. **Insufficient training data**: There aren't enough published gene conversion tract measurements across different conditions to train a meaningful ML model.
+2. **Interpretability**: Every prediction in ConversionSim traces to a specific biological step. When the model fails (ssODN donors), we know exactly WHY — the SSTR pathway. A black-box ML model would hide this insight.
+3. **Extrapolation**: ML models are notoriously poor at extrapolating beyond training data. Our mechanistic model makes physically grounded predictions even for novel conditions (new nucleases, new donor types) by adjusting the relevant parameters.
+
+That said, ML could be valuable in future versions — for example, training a model to predict locus-specific HDR efficiency from chromatin features (histone marks, ATAC-seq, replication timing). That's a natural extension once sufficient training data exists."
+
+### Q32: "How does your tool compare to in silico primer/probe design tools in terms of complexity?"
+
+**A:** "Very different level of complexity.
+
+Primer design tools (like Primer3) solve a **sequence-level** problem: find two short sequences that will anneal to your template at the right temperature with the right specificity. This is a string-matching + thermodynamics problem.
+
+CRISPRArchitect solves a **systems-level** problem: given the 3D genome architecture, DNA repair biology, cell type constraints, and multiple editing modalities, what is the optimal strategy? This involves:
+- Stochastic simulation of a multi-step biological process (HDR)
+- Polymer physics modeling of 3D chromatin (ChromBridge)
+- Multi-objective optimization across 4 dimensions (MOSAIC)
+- Integration with genome annotation databases (Ensembl)
+
+It's conceptually more similar to metabolic flux modeling or systems pharmacology than to sequence design tools."
+
+---
+
 ## KEY NUMBERS TO MEMORIZE
 
 These are the numbers people will ask about. Know them cold.
