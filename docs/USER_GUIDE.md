@@ -1,5 +1,13 @@
 # CRISPRArchitect — Step-by-Step User Guide
 
+> **Note:** This guide covers the v1 web interface. For v2 features (transcript-aware variant analysis, consequence-guided scoring), use the Python API:
+> ```python
+> from core.pipeline.strategy_stage import StrategyPipeline
+> from core.models import GenomicVariantInput
+> pipeline = StrategyPipeline(cell_type="iPSC", nuclease="SpCas9")
+> result = pipeline.run([GenomicVariantInput("17", 31200443, "C", "T", gene_symbol="NF1")])
+> ```
+
 ## Table of Contents
 
 1. [How to Launch the Web App](#1-how-to-launch-the-web-app)

@@ -206,3 +206,22 @@ Keep the tool deterministic and transparent. Scientists trust tools where they c
 My answer: **Yes for an application note in NAR/Bioinformatics**, with the caveat that the predictions are framed as "literature-calibrated estimates" rather than "validated predictions." **Not yet for a methods paper in a top journal** — that would require experimental validation of at least ConversionSim.
 
 **Is it worth making public?** Yes — even without a paper, releasing it on GitHub with good documentation would be useful to the community. Many bioinformatics tools start as GitHub repos and gain users before being formally published.
+
+---
+
+## v2 Update (March 24, 2026)
+
+Several gaps identified above have been addressed in v2:
+- [FILLED] Ensembl integration for transcript mapping
+- [FILLED] Reference allele validation
+- [FILLED] Coding and splice-site consequence annotation
+- [FILLED] PAM-verified feasibility engines (BE, PE, HDR)
+- [FILLED] Multi-objective scoring with consequence penalties
+- [FILLED] 30-case benchmark with real ClinVar variants
+
+Remaining gaps:
+- Webapp integration (v2 pipeline not yet in Streamlit UI)
+- Experimental validation (all results are computational)
+- Off-target prediction
+- Chromatin accessibility integration
+- HGVS parser for clinical input

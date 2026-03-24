@@ -1,11 +1,11 @@
 cff-version: 1.2.0
-title: "CRISPRArchitect: A Computational Platform for Multi-Site Genome Editing Strategy Optimization"
+title: "CRISPRArchitect: A Transcript-Aware Computational Platform for Multi-Modality Genome Editing Strategy Optimization"
 message: "If you use CRISPRArchitect in your research, please cite it using these metadata."
 type: software
 license: MIT
 repository-code: "https://github.com/visvikbharti/CRISPRArchitect"
-version: 0.1.0
-date-released: "2026-03-20"
+version: 2.0.0
+date-released: "2026-03-24"
 authors:
   - family-names: Bharti
     given-names: Vishal
@@ -24,3 +24,8 @@ keywords:
   - bioinformatics
   - computational-biology
   - gene-therapy
+  - transcript-aware
+  - consequence-guided
+  - ClinVar
+  - enFnCas9
+  - multi-modality

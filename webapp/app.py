@@ -80,6 +80,23 @@ except ImportError:
     )
 
 # ---------------------------------------------------------------------------
+# v2 Variant Analysis page (optional — graceful if v2 modules missing)
+# ---------------------------------------------------------------------------
+_V2_PAGE_AVAILABLE = False
+try:
+    try:
+        from webapp.app_v2_page import (
+            render_v2_sidebar, page_v2_analysis, run_v2_pipeline,
+        )
+    except ImportError:
+        from app_v2_page import (
+            render_v2_sidebar, page_v2_analysis, run_v2_pipeline,
+        )
+    _V2_PAGE_AVAILABLE = True
+except ImportError:
+    _V2_PAGE_AVAILABLE = False
+
+# ---------------------------------------------------------------------------
 # Plotly / matplotlib imports
 # ---------------------------------------------------------------------------
 try:
@@ -143,6 +160,8 @@ PAGES = {
     "Donor Quality Check (TopoPred)": "topopred",
     "Full Analysis Report": "report",
 }
+if _V2_PAGE_AVAILABLE:
+    PAGES["v2: Variant Analysis"] = "v2_analysis"
 
 with st.sidebar:
     st.markdown(
@@ -179,6 +198,13 @@ with st.sidebar:
         f"**Cell type:** {st.session_state.get('cell_type', 'N/A')}  \n"
         f"**Nuclease:** {st.session_state.get('nuclease', 'N/A')}"
     )
+
+# --- v2 sidebar: render variant inputs when v2 page is selected ---
+_v2_params = None
+if _V2_PAGE_AVAILABLE and page == "v2_analysis":
+    _v2_params = render_v2_sidebar()
+    if _v2_params is not None:
+        run_v2_pipeline(_v2_params)
 
 # --- Apply dark/light theme CSS based on toggle ---
 if st.session_state.get("dark_mode", False):
@@ -2023,5 +2049,7 @@ PAGE_FUNCTIONS = {
     "topopred": page_topopred,
     "report": page_report,
 }
+if _V2_PAGE_AVAILABLE:
+    PAGE_FUNCTIONS["v2_analysis"] = page_v2_analysis
 
 PAGE_FUNCTIONS[page]()

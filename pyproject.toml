@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "crisprarchitect"
-version = "0.1.0"
-description = "A computational toolkit for multi-site genome editing strategy optimization"
+version = "2.0.0"
+description = "A transcript-aware computational platform for multi-modality genome editing strategy optimization (v2: consequence-guided scoring, ClinVar-benchmarked)"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.9"
@@ -48,9 +48,9 @@ dev = [
 crisprarchitect = "cli:main"
 
 [project.urls]
-Homepage = "https://github.com/crisprarchitect/crisprarchitect"
+Homepage = "https://github.com/visvikbharti/CRISPRArchitect"
 Documentation = "https://crisprarchitect.readthedocs.io"
-Repository = "https://github.com/crisprarchitect/crisprarchitect"
+Repository = "https://github.com/visvikbharti/CRISPRArchitect"
 
 [tool.setuptools.packages.find]
 include = [
@@ -61,6 +61,8 @@ include = [
     "chrombridge",
     "loopsim",
     "utils",
+    "core",
+    "core.*",
 ]
 exclude = ["tests", "validation", "webapp", "examples", "docs"]
 

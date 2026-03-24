@@ -1,5 +1,14 @@
 # CRISPRArchitect — Architecture & Design Document
 
+## v2 Extension (March 2026)
+CRISPRArchitect v2 adds transcript-aware, consequence-guided editing strategy design on top of the v1 foundation. See README.md for the complete v2 architecture. Key additions:
+- Ensembl-based transcript mapping and reference validation
+- PAM-verified feasibility for ABE, CBE, PE, and HDR
+- Consequence-aware multi-objective scoring
+- 30-case benchmark with real ClinVar variants (86.7% Top-1 accuracy)
+
+---
+
 ## For Scientists: Understanding the Code From Scratch
 
 This document explains the entire CRISPRArchitect system from first principles. You don't need a computer science background to understand it — we explain every concept as it relates to the biology.
