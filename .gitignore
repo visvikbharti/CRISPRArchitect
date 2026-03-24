@@ -41,3 +41,7 @@ validation/figures/*.png
 # Temp
 *.tmp
 *.log
+
+# Benchmark outputs (can be regenerated)
+# Keep JSON results and figures for reproducibility
+

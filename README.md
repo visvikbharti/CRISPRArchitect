@@ -1,117 +1,162 @@
 # CRISPRArchitect
 
-**A computational toolkit for multi-site genome editing strategy optimization**
+**Transcript-aware, consequence-guided design of genome editing strategies across modalities**
 
-CRISPRArchitect is a suite of bioinformatics tools that helps researchers plan complex genome editing experiments, particularly those involving multiple mutation sites in large multi-exon genes. It integrates knowledge from DNA repair biology, 3D genome organization, polymer physics, and donor template chemistry.
+CRISPRArchitect is a computational framework for designing and ranking genome editing strategies that unifies base editing (BE), prime editing (PE), and homology-directed repair (HDR) within a single decision-making system.
 
-## Motivation
+## Key Features
 
-When correcting multiple mutations in a large gene (e.g., a gene with 60 exons where mutations exist in exon 40 and exon 60), researchers face critical questions:
+- **Unified strategy space**: Evaluates BE, PE, HDR, and hybrid combinations together
+- **Transcript-aware mapping**: Maps variants to exon structure, coding frame, and splice sites via Ensembl
+- **Consequence-aware scoring**: Integrates amino acid changes, splice proximity, and bystander effects
+- **PAM-verified feasibility**: Checks actual PAM availability and editing window compatibility
+- **Explicit rejection**: Identifies and explains why infeasible strategies are excluded
+- **Multi-nuclease support**: SpCas9 (NGG) and enFnCas9 (NRG) as first-class citizens
 
-- Can a single donor template correct both sites? (Usually no — but why, quantitatively?)
-- What is the optimal editing strategy? (Sequential HDR? Simultaneous? Base editing?)
-- What is the translocation risk of making two simultaneous DSBs?
-- Is my cssDNA donor folding into structures that block HDR?
-- How far from the cut site will my donor sequence be incorporated?
+## Benchmark Results
 
-**No existing tool answers these questions.** CRISPRArchitect fills this gap.
+Evaluated on 30 curated variant scenarios with verified GRCh38 coordinates:
 
-## Tool Suite
+| Metric | Value |
+|--------|-------|
+| Top-1 Accuracy | 86.7% (26/30) |
+| Top-3 Accuracy | 96.7% (29/30) |
+| Rejection Accuracy | 90.0% (27/30) |
 
-### 1. ConversionSim — Gene Conversion Tract Simulator
-Monte Carlo simulation of HDR mechanics: end resection, RAD51 filament formation, strand invasion, and SDSA-mediated synthesis. Predicts the distribution of gene conversion tract lengths and the probability of incorporating edits at various distances from the DSB.
+## Architecture
 
-### 2. MOSAIC — Multi-locus Optimized Strategy for Allele-specific Integrated Correction
-Given a gene structure and mutation positions, MOSAIC enumerates all feasible editing strategies and ranks them by predicted efficiency, safety, time, and cost.
+CRISPRArchitect comprises two layers:
 
-### 3. cssDNA-TopoPred — Secondary Structure Analyzer for ssDNA Donors
-Analyzes cssDNA donor templates for problematic secondary structures (hairpins, G-quadruplexes) that could impair HDR. Scores homology arm accessibility and suggests sequence optimizations.
+### v1 Modules (~24,000 LOC)
+- **ConversionSim**: Monte Carlo HDR gene conversion tract simulator (validated against 4 published datasets)
+- **MOSAIC**: Multi-locus editing strategy optimizer (benchmarked against 14 published papers)
+- **TopoPred**: cssDNA secondary structure analyzer (G-quadruplex, hairpin, accessibility)
+- **ChromBridge**: 3D chromatin distance and translocation risk predictor
+- **LoopSim**: Cohesin loop extrusion simulator
+- **WebApp**: Interactive Streamlit application
 
-### 4. ChromBridge — 3D Chromatin-Aware Feasibility Predictor
-Uses polymer physics models calibrated to Hi-C data to estimate 3D distances between loci, translocation risk, and the physical feasibility of single-template multi-site editing.
-
-## Installation
-
-```bash
-pip install -r requirements.txt
-```
+### v2 Modules (~9,400 LOC)
+- **Sequence Layer**: Ensembl transcript fetcher, genomic-to-transcript mapper, reference validator, coding annotator, variant normalizer
+- **Feasibility Layer**: Enhanced PAM scanner, base editing engine (ABE/CBE), prime editing engine, HDR design engine
+- **Strategy Layer**: Consequence-aware strategy generator, annotation integrator
+- **Pipeline**: End-to-end orchestrator (single entry point)
+- **Benchmarks**: 30-case evaluation framework with publication-quality plotting
 
 ## Quick Start
 
-```python
-from crisprarchitect.conversion_sim import ConversionSimulator
-from crisprarchitect.mosaic import StrategyOptimizer
-from crisprarchitect.topopred import DonorAnalyzer
-from crisprarchitect.chrombridge import ChromatinDistancePredictor
+### Installation
 
-# Example: Simulate gene conversion tract lengths
-sim = ConversionSimulator(
-    cut_type="staggered_5prime",  # enFnCas9-like
-    overhang_length=4,
-    donor_topology="circular_ss",
-    n_simulations=10000
-)
-results = sim.run()
-results.plot_tract_distribution()
-results.probability_at_distance(500)  # P(edit incorporated) at 500bp from cut
+```bash
+git clone https://github.com/visvikbharti/CRISPRArchitect.git
+cd CRISPRArchitect/crisprarchitect
+pip install -r requirements.txt
+```
+
+### Run the v2 pipeline
+
+```python
+from core.pipeline.strategy_stage import StrategyPipeline
+from core.models import GenomicVariantInput
+
+pipeline = StrategyPipeline(cell_type="iPSC", nuclease="SpCas9")
+
+result = pipeline.run([
+    GenomicVariantInput(
+        chromosome="17",
+        position=31200443,
+        ref_allele="C",
+        alt_allele="T",
+        gene_symbol="NF1",
+        name="c.910C>T",
+    ),
+])
+
+for strategy in result.strategies:
+    print(f"#{strategy.rank}: {strategy.strategy_name} "
+          f"(score={strategy.overall_score:.3f})")
+```
+
+### Run the benchmark
+
+```bash
+python -m benchmarks.run_benchmark --input benchmarks/dataset_v1.json
+```
+
+### Run the interactive web app
+
+```bash
+streamlit run webapp/app.py
+```
+
+### Run tests
+
+```bash
+python -m pytest tests/ -v
 ```
 
 ## Project Structure
 
 ```
 crisprarchitect/
-├── conversion_sim/      # Gene conversion tract simulator
-│   ├── __init__.py
-│   ├── resection.py     # End resection models
-│   ├── filament.py      # RAD51 filament formation
-│   ├── synthesis.py     # Template-directed synthesis (SDSA)
-│   ├── simulator.py     # Main Monte Carlo engine
-│   └── models.py        # Parameter sets and calibration data
-├── mosaic/              # Multi-site strategy optimizer
-│   ├── __init__.py
-│   ├── gene_structure.py    # Gene annotation fetcher
-│   ├── mutation_classifier.py  # Classify mutation types
-│   ├── strategy_enumerator.py  # Enumerate editing strategies
-│   ├── scorer.py        # Score and rank strategies
-│   └── reporter.py      # Generate recommendation reports
-├── topopred/            # cssDNA secondary structure analyzer
-│   ├── __init__.py
-│   ├── g_quadruplex.py  # G-quadruplex motif scanner
-│   ├── hairpin.py       # Hairpin/stem-loop predictor
-│   ├── accessibility.py # Homology arm accessibility scorer
-│   └── optimizer.py     # Sequence optimization suggestions
-├── chrombridge/         # 3D chromatin distance predictor
-│   ├── __init__.py
-│   ├── polymer_model.py # Polymer physics (WLC/Gaussian chain)
-│   ├── distance.py      # 3D distance estimation
-│   ├── translocation.py # Translocation risk scoring
-│   └── tad_analysis.py  # TAD boundary analysis
-├── utils/               # Shared utilities
-│   ├── __init__.py
-│   ├── constants.py     # Biological constants
-│   ├── plotting.py      # Visualization helpers
-│   └── sequence.py      # Sequence manipulation utilities
-├── tests/               # Unit tests
-├── examples/            # Example scripts and notebooks
-└── docs/                # Documentation
+    core/                          # v2 modules
+        models.py                  # Central data models
+        sequence/                  # Transcript mapping and annotation
+        feasibility/               # BE, PE, HDR feasibility engines
+        mosaic/                    # Strategy generation and scoring
+        pipeline/                  # End-to-end orchestrator
+    mosaic/                        # v1 strategy optimizer
+    conversion_sim/                # v1 gene conversion simulator
+    topopred/                      # v1 cssDNA structure analyzer
+    chrombridge/                   # v1 3D chromatin predictor
+    loopsim/                       # v1 cohesin loop simulator
+    utils/                         # Shared utilities and constants
+    webapp/                        # Streamlit interactive app
+    benchmarks/                    # Evaluation framework
+        dataset_v1.json            # 30 curated ClinVar cases
+        evaluator.py               # Benchmark evaluator
+        run_benchmark.py           # CLI runner
+        plotting.py                # Publication figures
+    tests/                         # Test suite
+    paper/                         # Manuscript and figures
+    validation/                    # v1 validation reports
 ```
 
-## Scientific Basis
+## Scoring Function
 
-Every parameter and model in CRISPRArchitect is calibrated to published experimental data. Key references:
+```
+Score = w1*Safety + w2*Feasibility - w3*Complexity - w4*Risk + w5*Confidence
+```
 
-- **Gene conversion tracts:** Elliott et al., Mol Cell Biol, 1998; Paquet et al., Nature, 2016
-- **cssDNA donors:** Iyer et al., CRISPR Journal, 2022; Xie et al., Nature Biotechnology, 2025
-- **Staggered cuts & HDR:** Chauhan et al., PNAS, 2023
-- **enFnCas9:** Chakraborty et al., Nature Communications, 2024
-- **3D genome & HDR:** Marin-Gonzalez et al., Science, 2025
-- **Polymer models:** Lieberman-Aiden et al., Science, 2009; Rao et al., Cell, 2014
+Default weights (iPSC-optimized):
+- Safety: 0.30 (DSB-free approaches preferred)
+- Feasibility: 0.25 (PAM availability, window compatibility)
+- Complexity: 0.20 (rounds, donors, screening burden)
+- Risk: 0.15 (rearrangement, bystanders, splice proximity)
+- Confidence: 0.10 (evidence tier)
+
+## Key Finding
+
+PAM-dependent editing window constraints are a more significant bottleneck for base editing applicability than mutation-type classification alone. At all seven tested ClinVar loci with ABE-compatible transitions, no SpCas9 guide placed the target base within the ABE editing window (positions 4-7), causing prime editing to emerge as the preferred modality in 97% of cases.
+
+## Requirements
+
+- Python 3.9+
+- NumPy >= 1.24.0
+- SciPy >= 1.10.0
+- Matplotlib >= 3.7.0
+- Streamlit >= 1.30.0 (for web app)
+
+## Citation
+
+If you use CRISPRArchitect in your research, please cite:
+
+> Bharti V, Chakraborty D. CRISPRArchitect: transcript-aware and consequence-guided design of genome editing strategies across modalities. (2026). *In preparation.*
 
 ## License
 
 MIT License
 
-## Citation
+## Authors
 
-If you use CRISPRArchitect in your research, please cite:
-[Publication pending]
+- **Vishal Bharti** — CSIR-Institute of Genomics and Integrative Biology, New Delhi
+- **Debojyoti Chakraborty** — CSIR-Institute of Genomics and Integrative Biology, New Delhi

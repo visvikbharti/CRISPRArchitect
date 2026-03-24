@@ -1,0 +1,993 @@
+{
+  "version": "1.1",
+  "genome_build": "GRCh38",
+  "description": "CRISPRArchitect v2 benchmark dataset with 30 curated cases from ClinVar and Ensembl. All coordinates are on GRCh38. Each case includes biological rationale for the expected editing modality, enabling evaluation of consequence-aware strategy ranking. v1.1: Genomic positions corrected via Ensembl REST API CDS-to-genomic mapping (/map/cds and /vep/human/hgvs endpoints) for all single-variant cases with known cDNA positions.",
+  "coordinate_verification": "Positions verified using Ensembl REST API v112+ /map/cds/{transcript_id} and /vep/human/hgvs endpoints. Reference alleles confirmed against GRCh38 forward strand sequence via /sequence/region. For reverse strand genes (HBB, TSC1), ref_allele in dataset matches the CDS/HGVS convention (complement of forward strand).",
+  "cases": [
+    {
+      "case_id": "BE_NF1_001",
+      "gene_symbol": "NF1",
+      "transcript_id": "ENST00000358273",
+      "variants": [
+        {
+          "chromosome": "17",
+          "position": 31200443,
+          "ref_allele": "C",
+          "alt_allele": "T",
+          "name": "c.910C>T"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "clean_base_editable",
+      "truth_label": {
+        "preferred": ["base editing"],
+        "acceptable": ["prime editing"],
+        "reject": ["sequential hdr", "dual hdr"]
+      },
+      "disease_context": "Neurofibromatosis type 1",
+      "source_pmid": "",
+      "rationale": [
+        "Nonsense mutation p.Arg304Ter: C>T on coding strand means G>A on template strand",
+        "ABE correction A>G on template strand restores Arg codon",
+        "Clean C>T transition is the canonical ABE target class"
+      ],
+      "notes": "ClinVar VCV000043587; position verified via Ensembl VEP CDS-to-genomic mapping (GRCh38)"
+    },
+    {
+      "case_id": "BE_CFTR_002",
+      "gene_symbol": "CFTR",
+      "transcript_id": "ENST00000003084",
+      "variants": [
+        {
+          "chromosome": "7",
+          "position": 117587806,
+          "ref_allele": "G",
+          "alt_allele": "A",
+          "name": "c.1652G>A"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "clean_base_editable",
+      "truth_label": {
+        "preferred": ["base editing"],
+        "acceptable": ["prime editing"],
+        "reject": ["sequential hdr", "dual hdr"]
+      },
+      "disease_context": "Cystic fibrosis (G551D)",
+      "source_pmid": "24461666",
+      "rationale": [
+        "Missense p.Gly551Asp: G>A transition at a well-characterized CF-causing locus",
+        "ABE can correct A>G to restore wild-type glycine codon",
+        "G551D is an FDA-approved ivacaftor target, validating clinical relevance"
+      ],
+      "notes": "ClinVar VCV000007107; rs75527207; position verified via Ensembl VEP (GRCh38)"
+    },
+    {
+      "case_id": "BE_COL7A1_003",
+      "gene_symbol": "COL7A1",
+      "transcript_id": "ENST00000328333",
+      "variants": [
+        {
+          "chromosome": "3",
+          "position": 48601668,
+          "ref_allele": "G",
+          "alt_allele": "A",
+          "name": "c.425A>G splice donor"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "clean_base_editable",
+      "truth_label": {
+        "preferred": ["base editing"],
+        "acceptable": ["prime editing"],
+        "reject": ["sequential hdr", "dual hdr"]
+      },
+      "disease_context": "Dystrophic epidermolysis bullosa (DEB)",
+      "source_pmid": "32123317",
+      "rationale": [
+        "Splice donor G>A variant disrupts canonical GT splice signal",
+        "ABE correction A>G restores splice donor consensus sequence",
+        "Splice site variants are high-priority ABE targets due to precise correction"
+      ],
+      "notes": "ClinVar VCV000017070; COL7A1 splice donor variants are recurrent in DEB"
+    },
+    {
+      "case_id": "BE_BRCA2_004",
+      "gene_symbol": "BRCA2",
+      "transcript_id": "ENST00000380152",
+      "variants": [
+        {
+          "chromosome": "13",
+          "position": 32332343,
+          "ref_allele": "A",
+          "alt_allele": "G",
+          "name": "c.865A>G"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "clean_base_editable",
+      "truth_label": {
+        "preferred": ["base editing"],
+        "acceptable": ["prime editing"],
+        "reject": ["sequential hdr", "dual hdr"]
+      },
+      "disease_context": "Hereditary breast and ovarian cancer",
+      "source_pmid": "",
+      "rationale": [
+        "Missense variant A>G: correction requires C>T edit on coding strand",
+        "CBE can install the corrective C>T change to restore wild-type allele",
+        "Single transition amenable to cytosine base editor"
+      ],
+      "notes": "ClinVar VCV000051065; BRCA2 missense classified as likely pathogenic; position verified via Ensembl CDS mapping (GRCh38)"
+    },
+    {
+      "case_id": "BE_RB1_005",
+      "gene_symbol": "RB1",
+      "transcript_id": "ENST00000267163",
+      "variants": [
+        {
+          "chromosome": "13",
+          "position": 48367512,
+          "ref_allele": "C",
+          "alt_allele": "T",
+          "name": "c.958C>T"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "clean_base_editable",
+      "truth_label": {
+        "preferred": ["base editing"],
+        "acceptable": ["prime editing"],
+        "reject": ["sequential hdr", "dual hdr"]
+      },
+      "disease_context": "Retinoblastoma",
+      "source_pmid": "",
+      "rationale": [
+        "Nonsense mutation p.Arg320Ter: C>T creates premature stop codon",
+        "ABE correction of A>G on antisense strand restores Arg codon",
+        "RB1 Arg>Ter mutations are the most common class in retinoblastoma"
+      ],
+      "notes": "ClinVar VCV000012146; recurrent CGA>TGA nonsense in RB1; position verified via Ensembl VEP (GRCh38)"
+    },
+    {
+      "case_id": "BE_TSC2_006",
+      "gene_symbol": "TSC2",
+      "transcript_id": "ENST00000219476",
+      "variants": [
+        {
+          "chromosome": "16",
+          "position": 2064341,
+          "ref_allele": "C",
+          "alt_allele": "T",
+          "name": "c.1513C>T"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "clean_base_editable",
+      "truth_label": {
+        "preferred": ["base editing"],
+        "acceptable": ["prime editing"],
+        "reject": ["sequential hdr", "dual hdr"]
+      },
+      "disease_context": "Tuberous sclerosis complex",
+      "source_pmid": "",
+      "rationale": [
+        "Nonsense mutation p.Arg505Ter: C>T transition in CGA codon",
+        "ABE correction A>G restores arginine, a recurrent hotspot in TSC2",
+        "Clean transition amenable to ABE without bystander risk"
+      ],
+      "notes": "ClinVar VCV000012476; recurrent CGA>TGA nonsense hotspot in TSC2; position verified via Ensembl CDS mapping (GRCh38)"
+    },
+    {
+      "case_id": "BE_FBN1_007",
+      "gene_symbol": "FBN1",
+      "transcript_id": "ENST00000316623",
+      "variants": [
+        {
+          "chromosome": "15",
+          "position": 48408306,
+          "ref_allele": "T",
+          "alt_allele": "C",
+          "name": "c.4039T>C"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "clean_base_editable",
+      "truth_label": {
+        "preferred": ["base editing"],
+        "acceptable": ["prime editing"],
+        "reject": ["sequential hdr", "dual hdr"]
+      },
+      "disease_context": "Marfan syndrome",
+      "source_pmid": "",
+      "rationale": [
+        "Missense T>C transition: correction requires C>T on coding strand",
+        "CBE can install the corrective edit to restore wild-type residue",
+        "FBN1 missense mutations in cbEGF domains are a major class of Marfan-causing variants"
+      ],
+      "notes": "ClinVar VCV000042805; FBN1 missense in calcium-binding EGF-like domain"
+    },
+    {
+      "case_id": "BE_NEG_HBB_008",
+      "gene_symbol": "HBB",
+      "transcript_id": "ENST00000335295",
+      "variants": [
+        {
+          "chromosome": "11",
+          "position": 5227002,
+          "ref_allele": "A",
+          "alt_allele": "T",
+          "name": "c.20A>T"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "base_editing_negative",
+      "truth_label": {
+        "preferred": ["prime editing"],
+        "acceptable": ["single-step hdr"],
+        "reject": ["base editing"]
+      },
+      "disease_context": "Sickle cell disease (HbS)",
+      "source_pmid": "28187094",
+      "rationale": [
+        "Sickle mutation p.Glu7Val: A>T TRANSVERSION (not a transition)",
+        "Neither ABE nor CBE can correct transversion mutations",
+        "Base editing should be rejected; PE or HDR required for precise correction",
+        "This is a critical negative control for the base editing classifier"
+      ],
+      "notes": "ClinVar VCV000015333; HBB c.20A>T (rs334) is the canonical sickle cell variant; position verified via Ensembl VEP at chr11:5227002 (GRCh38, reverse strand: genomic fwd T, CDS ref A). This case tests that the pipeline correctly rejects base editing for transversions."
+    },
+    {
+      "case_id": "PE_CFTR_009",
+      "gene_symbol": "CFTR",
+      "transcript_id": "ENST00000003084",
+      "variants": [
+        {
+          "chromosome": "7",
+          "position": 117587778,
+          "ref_allele": "G",
+          "alt_allele": "T",
+          "name": "c.1624G>T"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "prime_editable_transversion",
+      "truth_label": {
+        "preferred": ["prime editing"],
+        "acceptable": ["single-step hdr"],
+        "reject": ["base editing"]
+      },
+      "disease_context": "Cystic fibrosis (G542X)",
+      "source_pmid": "",
+      "rationale": [
+        "Nonsense p.Gly542Ter: G>T transversion creates premature stop",
+        "Transversion cannot be corrected by ABE or CBE",
+        "Prime editing can install precise T>G correction via pegRNA"
+      ],
+      "notes": "ClinVar VCV000007108; CFTR G542X is the second most common CF nonsense mutation worldwide; position verified via Ensembl VEP (GRCh38)"
+    },
+    {
+      "case_id": "PE_NF1_010",
+      "gene_symbol": "NF1",
+      "transcript_id": "ENST00000358273",
+      "variants": [
+        {
+          "chromosome": "17",
+          "position": 31226474,
+          "ref_allele": "C",
+          "alt_allele": "A",
+          "name": "c.2041C>A"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "prime_editable_transversion",
+      "truth_label": {
+        "preferred": ["prime editing"],
+        "acceptable": ["single-step hdr"],
+        "reject": ["base editing"]
+      },
+      "disease_context": "Neurofibromatosis type 1",
+      "source_pmid": "",
+      "rationale": [
+        "Nonsense mutation via C>A transversion in NF1",
+        "Transversion precludes base editing correction",
+        "PE can precisely install the A>C reversion"
+      ],
+      "notes": "NF1 transversion variant; PE is the preferred DSB-free approach; position verified via Ensembl CDS mapping (GRCh38)"
+    },
+    {
+      "case_id": "PE_BRCA2_011",
+      "gene_symbol": "BRCA2",
+      "transcript_id": "ENST00000380152",
+      "variants": [
+        {
+          "chromosome": "13",
+          "position": 32338919,
+          "ref_allele": "AAAG",
+          "alt_allele": "-",
+          "name": "c.658_661delAAAG"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "prime_editable_small_indel",
+      "truth_label": {
+        "preferred": ["prime editing"],
+        "acceptable": ["single-step hdr"],
+        "reject": ["base editing"]
+      },
+      "disease_context": "Hereditary breast and ovarian cancer",
+      "source_pmid": "",
+      "rationale": [
+        "4bp deletion causing frameshift in BRCA2 exon 7",
+        "Small deletion is within PE RT-template capacity (up to ~40bp insertion/deletion)",
+        "Base editing cannot install insertions; PE is preferred"
+      ],
+      "notes": "ClinVar VCV000051587; recurrent small deletion in BRCA2"
+    },
+    {
+      "case_id": "PE_DMD_012",
+      "gene_symbol": "DMD",
+      "transcript_id": "ENST00000357033",
+      "variants": [
+        {
+          "chromosome": "X",
+          "position": 32364117,
+          "ref_allele": "AG",
+          "alt_allele": "-",
+          "name": "c.3432_3433delAG"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "prime_editable_small_indel",
+      "truth_label": {
+        "preferred": ["prime editing"],
+        "acceptable": ["single-step hdr"],
+        "reject": ["base editing"]
+      },
+      "disease_context": "Duchenne muscular dystrophy",
+      "source_pmid": "",
+      "rationale": [
+        "2bp deletion causing frameshift in DMD",
+        "Small deletion is within PE design capacity",
+        "Prime editing inserts the missing AG dinucleotide via pegRNA RT template"
+      ],
+      "notes": "DMD small deletion; hemizygous in males simplifies editing genotyping"
+    },
+    {
+      "case_id": "PE_PKD1_013",
+      "gene_symbol": "PKD1",
+      "transcript_id": "ENST00000262304",
+      "variants": [
+        {
+          "chromosome": "16",
+          "position": 2154173,
+          "ref_allele": "GCT",
+          "alt_allele": "-",
+          "name": "c.5014_5016delGCT"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "prime_editable_small_indel",
+      "truth_label": {
+        "preferred": ["prime editing"],
+        "acceptable": ["single-step hdr"],
+        "reject": ["base editing"]
+      },
+      "disease_context": "Autosomal dominant polycystic kidney disease",
+      "source_pmid": "",
+      "rationale": [
+        "In-frame 3bp deletion removing one amino acid from polycystin-1",
+        "Small in-frame deletion is ideal PE target: precise reinsertion via RT template",
+        "No frameshift, but functional domain disruption is pathogenic"
+      ],
+      "notes": "PKD1 in-frame deletion; PE reinstates the missing codon"
+    },
+    {
+      "case_id": "PE_COL7A1_014",
+      "gene_symbol": "COL7A1",
+      "transcript_id": "ENST00000328333",
+      "variants": [
+        {
+          "chromosome": "3",
+          "position": 48603610,
+          "ref_allele": "-",
+          "alt_allele": "G",
+          "name": "c.2470insG"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "prime_editable_small_indel",
+      "truth_label": {
+        "preferred": ["prime editing"],
+        "acceptable": ["single-step hdr"],
+        "reject": ["base editing"]
+      },
+      "disease_context": "Dystrophic epidermolysis bullosa (DEB)",
+      "source_pmid": "",
+      "rationale": [
+        "1bp insertion causing frameshift in COL7A1",
+        "Small insertion (1bp) is well within PE capacity",
+        "PE deletes the inserted G to restore reading frame"
+      ],
+      "notes": "COL7A1 small insertion; recurrent frameshift class in DEB"
+    },
+    {
+      "case_id": "PE_TSC1_015",
+      "gene_symbol": "TSC1",
+      "transcript_id": "ENST00000298552",
+      "variants": [
+        {
+          "chromosome": "9",
+          "position": 132906052,
+          "ref_allele": "CT",
+          "alt_allele": "-",
+          "name": "c.1525_1526delCT"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "prime_editable_small_indel",
+      "truth_label": {
+        "preferred": ["prime editing"],
+        "acceptable": ["single-step hdr"],
+        "reject": ["base editing"]
+      },
+      "disease_context": "Tuberous sclerosis complex",
+      "source_pmid": "",
+      "rationale": [
+        "2bp deletion in TSC1 causing frameshift and premature termination",
+        "Small deletion within PE RT-template capacity",
+        "PE reinstates the CT dinucleotide to restore reading frame"
+      ],
+      "notes": "ClinVar VCV000012391; TSC1 frameshift deletion; position verified via Ensembl VEP at chr9:132906052-132906053 (GRCh38, reverse strand gene, fwd strand ref CG)"
+    },
+    {
+      "case_id": "HDR_DMD_016",
+      "gene_symbol": "DMD",
+      "transcript_id": "ENST00000357033",
+      "variants": [
+        {
+          "chromosome": "X",
+          "position": 32305652,
+          "ref_allele": "N",
+          "alt_allele": "-",
+          "name": "exon 45 deletion (~180kb)"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "hdr_large_deletion",
+      "truth_label": {
+        "preferred": ["single-step hdr", "exon deletion"],
+        "acceptable": [],
+        "reject": ["base editing", "prime editing"]
+      },
+      "disease_context": "Duchenne muscular dystrophy",
+      "source_pmid": "25751815",
+      "rationale": [
+        "Whole-exon deletion: too large for PE (>40bp capacity)",
+        "Exon skipping strategy via dual-guide flanking deletion or HDR-based exon reinsertion",
+        "Base editing irrelevant: not a point mutation",
+        "Therapeutic exon deletion approach using paired nucleases is established for DMD"
+      ],
+      "notes": "DMD exon 45 deletion is one of the most common Duchenne mutations; exon-skipping drugs (eteplirsen) validate this region as therapeutic target"
+    },
+    {
+      "case_id": "HDR_NF1_017",
+      "gene_symbol": "NF1",
+      "transcript_id": "ENST00000358273",
+      "variants": [
+        {
+          "chromosome": "17",
+          "position": 31245000,
+          "ref_allele": "N",
+          "alt_allele": "-",
+          "name": "c.3113_3182del (70bp deletion)"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "hdr_large_deletion",
+      "truth_label": {
+        "preferred": ["single-step hdr"],
+        "acceptable": [],
+        "reject": ["base editing", "prime editing"]
+      },
+      "disease_context": "Neurofibromatosis type 1",
+      "source_pmid": "",
+      "rationale": [
+        "70bp deletion exceeds PE RT-template length capacity (~40bp)",
+        "HDR with cssDNA or lssDNA donor containing the deleted sequence is required",
+        "Not a point mutation, so base editing is not applicable"
+      ],
+      "notes": "NF1 large deletion; requires HDR donor template for precise reinsertion"
+    },
+    {
+      "case_id": "HDR_CFTR_018",
+      "gene_symbol": "CFTR",
+      "transcript_id": "ENST00000003084",
+      "variants": [
+        {
+          "chromosome": "7",
+          "position": 117559592,
+          "ref_allele": "CTT",
+          "alt_allele": "-",
+          "name": "c.1521_1523delCTT"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "hdr_or_pe_small_deletion",
+      "truth_label": {
+        "preferred": ["prime editing", "single-step hdr"],
+        "acceptable": [],
+        "reject": ["base editing"]
+      },
+      "disease_context": "Cystic fibrosis (F508del)",
+      "source_pmid": "26060301",
+      "rationale": [
+        "F508del (c.1521_1523delCTT) is the most common CF mutation worldwide (~70%)",
+        "3bp in-frame deletion: PE can insert CTT via RT template",
+        "HDR with ssODN is also feasible given the small size",
+        "Base editing cannot install insertions"
+      ],
+      "notes": "ClinVar VCV000007105; CFTR F508del (rs113993960) at chr7:117559592-117559594 (GRCh38); VCF anchor at 117559591 (ref TCTT, alt T). Position verified via Ensembl CDS mapping and VEP."
+    },
+    {
+      "case_id": "HDR_BRCA2_019",
+      "gene_symbol": "BRCA2",
+      "transcript_id": "ENST00000380152",
+      "variants": [
+        {
+          "chromosome": "13",
+          "position": 32332343,
+          "ref_allele": "A",
+          "alt_allele": "G",
+          "name": "c.865A>G"
+        },
+        {
+          "chromosome": "13",
+          "position": 32338613,
+          "ref_allele": "T",
+          "alt_allele": "G",
+          "name": "c.4258T>G"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "compound_het_hybrid",
+      "truth_label": {
+        "preferred": ["hybrid base editing + hdr", "hybrid prime editing + hdr"],
+        "acceptable": ["sequential hdr"],
+        "reject": []
+      },
+      "disease_context": "Hereditary breast and ovarian cancer (compound heterozygous)",
+      "source_pmid": "",
+      "rationale": [
+        "Two variants on same gene but separated by ~15kb genomic distance",
+        "First variant (A>G) is a transition: CBE-correctable",
+        "Second variant (T>G) is a transversion: requires PE or HDR",
+        "Hybrid strategy (BE for one + PE/HDR for other) avoids dual DSBs"
+      ],
+      "notes": "Compound heterozygous BRCA2; hybrid strategy reduces total DSB burden"
+    },
+    {
+      "case_id": "HDR_COL7A1_020",
+      "gene_symbol": "COL7A1",
+      "transcript_id": "ENST00000328333",
+      "variants": [
+        {
+          "chromosome": "3",
+          "position": 48601670,
+          "ref_allele": "G",
+          "alt_allele": "A",
+          "name": "c.425A>G"
+        },
+        {
+          "chromosome": "3",
+          "position": 48604512,
+          "ref_allele": "C",
+          "alt_allele": "T",
+          "name": "c.2851C>T"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "compound_het_sequential_hdr",
+      "truth_label": {
+        "preferred": ["sequential hdr"],
+        "acceptable": ["hybrid base editing + hdr"],
+        "reject": []
+      },
+      "disease_context": "Dystrophic epidermolysis bullosa (compound heterozygous)",
+      "source_pmid": "",
+      "rationale": [
+        "Two pathogenic variants in COL7A1 on different alleles",
+        "Both are transitions (G>A and C>T), but compound het requires phased editing",
+        "Sequential HDR ensures allele-specific correction",
+        "Hybrid BE approach possible if allele-specific guides can be designed"
+      ],
+      "notes": "Compound het DEB; sequential HDR is the conservative approach for allele-specific correction"
+    },
+    {
+      "case_id": "HDR_RYR1_021",
+      "gene_symbol": "RYR1",
+      "transcript_id": "ENST00000355481",
+      "variants": [
+        {
+          "chromosome": "19",
+          "position": 38499644,
+          "ref_allele": "G",
+          "alt_allele": "A",
+          "name": "c.6502G>A"
+        },
+        {
+          "chromosome": "19",
+          "position": 38588294,
+          "ref_allele": "C",
+          "alt_allele": "T",
+          "name": "c.14387C>T"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "compound_het_dual_be",
+      "truth_label": {
+        "preferred": ["dual base editing"],
+        "acceptable": ["hybrid base editing + prime editing", "sequential hdr"],
+        "reject": []
+      },
+      "disease_context": "Malignant hyperthermia / Central core disease (compound heterozygous)",
+      "source_pmid": "",
+      "rationale": [
+        "Two missense variants: G>A and C>T, both are transitions",
+        "Both are ABE-correctable (A>G reversion) and CBE-correctable (T>C reversion) respectively",
+        "Dual base editing addresses both without any DSBs: safest approach for iPSC",
+        "Variants are ~89kb apart, precluding single-donor HDR"
+      ],
+      "notes": "RYR1 compound het with two transitions; dual BE is the ideal DSB-free strategy"
+    },
+    {
+      "case_id": "HDR_FBN1_022",
+      "gene_symbol": "FBN1",
+      "transcript_id": "ENST00000316623",
+      "variants": [
+        {
+          "chromosome": "15",
+          "position": 48390000,
+          "ref_allele": "N",
+          "alt_allele": "-",
+          "name": "exon 26-28 deletion (~8kb)"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "hdr_large_deletion",
+      "truth_label": {
+        "preferred": ["single-step hdr"],
+        "acceptable": [],
+        "reject": ["base editing", "prime editing"]
+      },
+      "disease_context": "Marfan syndrome (multi-exon deletion)",
+      "source_pmid": "",
+      "rationale": [
+        "Multi-exon deletion (~8kb) far exceeds PE RT-template capacity",
+        "Requires HDR with large donor (lssDNA or dsDNA) for exon reinsertion",
+        "Not a point mutation, so base editing is not applicable"
+      ],
+      "notes": "FBN1 multi-exon deletion; large HDR donor required"
+    },
+    {
+      "case_id": "COMP_NF1_023",
+      "gene_symbol": "NF1",
+      "transcript_id": "ENST00000358273",
+      "variants": [
+        {
+          "chromosome": "17",
+          "position": 31200443,
+          "ref_allele": "C",
+          "alt_allele": "T",
+          "name": "c.910C>T"
+        },
+        {
+          "chromosome": "17",
+          "position": 31235729,
+          "ref_allele": "G",
+          "alt_allele": "T",
+          "name": "c.3827G>T"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "compound_het_hybrid",
+      "truth_label": {
+        "preferred": ["hybrid base editing + hdr", "hybrid base editing + prime editing"],
+        "acceptable": ["sequential hdr"],
+        "reject": ["dual base editing"]
+      },
+      "disease_context": "Neurofibromatosis type 1 (compound heterozygous)",
+      "source_pmid": "",
+      "rationale": [
+        "Variant 1 (C>T transition) is ABE-correctable",
+        "Variant 2 (G>T transversion) requires PE or HDR",
+        "Hybrid approach: ABE for transition + PE/HDR for transversion",
+        "Dual BE is rejected because the second variant is a transversion"
+      ],
+      "notes": "NF1 compound het with mixed mutation types; tests hybrid strategy selection"
+    },
+    {
+      "case_id": "COMP_CFTR_024",
+      "gene_symbol": "CFTR",
+      "transcript_id": "ENST00000003084",
+      "variants": [
+        {
+          "chromosome": "7",
+          "position": 117559592,
+          "ref_allele": "CTT",
+          "alt_allele": "-",
+          "name": "c.1521_1523delCTT (F508del)"
+        },
+        {
+          "chromosome": "7",
+          "position": 117587806,
+          "ref_allele": "G",
+          "alt_allele": "A",
+          "name": "c.1652G>A (G551D)"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "compound_het_hybrid",
+      "truth_label": {
+        "preferred": ["hybrid base editing + hdr", "hybrid base editing + prime editing"],
+        "acceptable": ["sequential hdr"],
+        "reject": ["dual base editing"]
+      },
+      "disease_context": "Cystic fibrosis (compound heterozygous F508del / G551D)",
+      "source_pmid": "",
+      "rationale": [
+        "F508del is a 3bp deletion: requires PE or HDR",
+        "G551D (G>A) is a transition: ABE-correctable",
+        "Hybrid strategy pairs ABE for G551D with PE/HDR for F508del",
+        "Dual BE rejected: F508del is a deletion, not a substitution"
+      ],
+      "notes": "Common CF compound het; most frequent genotype pairing in CF patients"
+    },
+    {
+      "case_id": "COMP_TSC_025",
+      "gene_symbol": "TSC2",
+      "transcript_id": "ENST00000219476",
+      "variants": [
+        {
+          "chromosome": "16",
+          "position": 2064341,
+          "ref_allele": "C",
+          "alt_allele": "T",
+          "name": "c.1513C>T"
+        },
+        {
+          "chromosome": "16",
+          "position": 2076141,
+          "ref_allele": "G",
+          "alt_allele": "A",
+          "name": "c.2713G>A"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "compound_het_dual_be",
+      "truth_label": {
+        "preferred": ["dual base editing"],
+        "acceptable": ["hybrid base editing + prime editing"],
+        "reject": ["sequential hdr"]
+      },
+      "disease_context": "Tuberous sclerosis complex (compound heterozygous)",
+      "source_pmid": "",
+      "rationale": [
+        "Both variants are C>T and G>A transitions",
+        "Both are ABE-correctable (reverse the pathogenic transition)",
+        "Dual ABE is the safest strategy: zero DSBs, zero donors, single round",
+        "Sequential HDR rejected: unnecessary DSB risk when DSB-free option exists"
+      ],
+      "notes": "TSC2 compound het with two ABE-amenable transitions; dual BE is optimal"
+    },
+    {
+      "case_id": "COMP_DMD_026",
+      "gene_symbol": "DMD",
+      "transcript_id": "ENST00000357033",
+      "variants": [
+        {
+          "chromosome": "X",
+          "position": 32380050,
+          "ref_allele": "C",
+          "alt_allele": "T",
+          "name": "c.2977C>T"
+        },
+        {
+          "chromosome": "X",
+          "position": 32364117,
+          "ref_allele": "AG",
+          "alt_allele": "-",
+          "name": "c.3432_3433delAG"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "compound_het_hybrid",
+      "truth_label": {
+        "preferred": ["hybrid base editing + prime editing"],
+        "acceptable": ["hybrid base editing + hdr", "sequential hdr"],
+        "reject": ["dual base editing"]
+      },
+      "disease_context": "Duchenne muscular dystrophy (two variants)",
+      "source_pmid": "",
+      "rationale": [
+        "Variant 1 (C>T) is ABE-correctable transition",
+        "Variant 2 is a 2bp deletion requiring PE or HDR",
+        "Hybrid BE+PE avoids DSBs entirely",
+        "Dual BE rejected: deletion variant cannot be base-edited"
+      ],
+      "notes": "DMD with mixed variant types; hybrid BE+PE is the DSB-free optimal"
+    },
+    {
+      "case_id": "COMP_PKD1_027",
+      "gene_symbol": "PKD1",
+      "transcript_id": "ENST00000262304",
+      "variants": [
+        {
+          "chromosome": "16",
+          "position": 2149702,
+          "ref_allele": "G",
+          "alt_allele": "A",
+          "name": "c.7786G>A"
+        },
+        {
+          "chromosome": "16",
+          "position": 2163460,
+          "ref_allele": "C",
+          "alt_allele": "A",
+          "name": "c.3707C>A"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "compound_het_hybrid",
+      "truth_label": {
+        "preferred": ["hybrid base editing + prime editing"],
+        "acceptable": ["hybrid base editing + hdr", "sequential hdr"],
+        "reject": ["dual base editing"]
+      },
+      "disease_context": "Autosomal dominant polycystic kidney disease (compound het)",
+      "source_pmid": "",
+      "rationale": [
+        "Variant 1 (G>A) is ABE-correctable transition",
+        "Variant 2 (C>A) is a transversion: requires PE or HDR",
+        "Hybrid strategy: ABE for the transition, PE/HDR for the transversion",
+        "Dual BE rejected: transversion cannot be base-edited"
+      ],
+      "notes": "PKD1 compound het; tests correct modality assignment per variant type"
+    },
+    {
+      "case_id": "COMP_RB1_028",
+      "gene_symbol": "RB1",
+      "transcript_id": "ENST00000267163",
+      "variants": [
+        {
+          "chromosome": "13",
+          "position": 48367512,
+          "ref_allele": "C",
+          "alt_allele": "T",
+          "name": "c.958C>T"
+        },
+        {
+          "chromosome": "13",
+          "position": 48381402,
+          "ref_allele": "G",
+          "alt_allele": "A",
+          "name": "c.1654G>A"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "compound_het_dual_be",
+      "truth_label": {
+        "preferred": ["dual base editing"],
+        "acceptable": ["hybrid base editing + prime editing"],
+        "reject": ["sequential hdr"]
+      },
+      "disease_context": "Retinoblastoma (bilateral, compound heterozygous)",
+      "source_pmid": "",
+      "rationale": [
+        "Both variants are transitions (C>T and G>A)",
+        "Both can be corrected with ABE (A>G reversion)",
+        "Dual ABE is the safest option: no DSBs, no donors",
+        "Sequential HDR rejected: unnecessary risk"
+      ],
+      "notes": "RB1 bilateral retinoblastoma compound het; dual BE is optimal"
+    },
+    {
+      "case_id": "EDGE_DISTANT_029",
+      "gene_symbol": "DMD",
+      "transcript_id": "ENST00000357033",
+      "variants": [
+        {
+          "chromosome": "X",
+          "position": 31137345,
+          "ref_allele": "C",
+          "alt_allele": "T",
+          "name": "c.10108C>T (exon 70)"
+        },
+        {
+          "chromosome": "X",
+          "position": 33038256,
+          "ref_allele": "G",
+          "alt_allele": "A",
+          "name": "c.31G>A (exon 1)"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "edge_distant_variants",
+      "truth_label": {
+        "preferred": ["dual base editing", "sequential hdr"],
+        "acceptable": ["hybrid base editing + prime editing"],
+        "reject": []
+      },
+      "disease_context": "Duchenne muscular dystrophy (distant variants)",
+      "source_pmid": "",
+      "rationale": [
+        "Variants are ~1.9 Mb apart, spanning nearly the entire DMD gene",
+        "No single donor template can bridge this distance",
+        "Independent correction of each variant is required (sequential or parallel)",
+        "Both are transitions: dual ABE is possible if independent guides exist",
+        "Tests the pipeline's ability to handle very distant intra-genic variants"
+      ],
+      "notes": "DMD is the largest human gene (~2.2 Mb). These variants span nearly its full length, testing the extreme distance handling."
+    },
+    {
+      "case_id": "EDGE_UTR_030",
+      "gene_symbol": "FMR1",
+      "transcript_id": "ENST00000370475",
+      "variants": [
+        {
+          "chromosome": "X",
+          "position": 147912050,
+          "ref_allele": "C",
+          "alt_allele": "G",
+          "name": "c.-129C>G (5'UTR)"
+        }
+      ],
+      "cell_type": "iPSC",
+      "nuclease": "SpCas9",
+      "category": "edge_noncoding",
+      "truth_label": {
+        "preferred": ["prime editing"],
+        "acceptable": ["single-step hdr"],
+        "reject": ["base editing"]
+      },
+      "disease_context": "Fragile X-related (5'UTR regulatory variant)",
+      "source_pmid": "",
+      "rationale": [
+        "5'UTR variant: not in CDS, consequence annotation differs from coding mutations",
+        "C>G transversion: base editing cannot correct transversions",
+        "PE can install precise G>C correction in non-coding region",
+        "Tests the pipeline's handling of non-coding variants and correct rejection of BE for transversions"
+      ],
+      "notes": "FMR1 5'UTR variant; tests non-coding variant handling and transversion rejection for BE"
+    }
+  ]
+}

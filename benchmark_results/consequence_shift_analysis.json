@@ -1,0 +1,8 @@
+{
+  "n_valid": 30,
+  "n_with_consequence_adjustment": 0,
+  "n_shifted": 0,
+  "shift_fraction": 0.0,
+  "analysis_note": "Consequence-aware scoring did not shift the top-ranked strategy in any of the 30 benchmark cases. This is because prime editing (top-ranked in 29/30 cases) inherently avoids bystander edits and does not trigger consequence penalties. The consequence scoring framework is correctly implemented (validated by unit tests showing penalty application for splice-proximal and bystander-creating strategies) but had no measurable impact on this benchmark because the PAM-window bottleneck prevented base editing from appearing as a competitor to PE. In a scenario where BE and PE are both feasible at the same locus, consequence-aware scoring WOULD differentiate them based on bystander risk.",
+  "implication": "The central claim of the paper should be reframed: CRISPRArchitect demonstrates that PAM-verified feasibility checking (not just mutation-type classification) is the primary driver of strategy differentiation, while consequence-aware scoring serves as a secondary refinement layer that becomes relevant when multiple modalities are viable at the same locus."
+}
