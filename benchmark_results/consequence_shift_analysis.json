@@ -1,8 +1,218 @@
 {
-  "n_valid": 30,
-  "n_with_consequence_adjustment": 0,
+  "n_valid": 28,
+  "n_with_consequence_adjustment": 27,
   "n_shifted": 0,
   "shift_fraction": 0.0,
-  "analysis_note": "Consequence-aware scoring did not shift the top-ranked strategy in any of the 30 benchmark cases. This is because prime editing (top-ranked in 29/30 cases) inherently avoids bystander edits and does not trigger consequence penalties. The consequence scoring framework is correctly implemented (validated by unit tests showing penalty application for splice-proximal and bystander-creating strategies) but had no measurable impact on this benchmark because the PAM-window bottleneck prevented base editing from appearing as a competitor to PE. In a scenario where BE and PE are both feasible at the same locus, consequence-aware scoring WOULD differentiate them based on bystander risk.",
-  "implication": "The central claim of the paper should be reframed: CRISPRArchitect demonstrates that PAM-verified feasibility checking (not just mutation-type classification) is the primary driver of strategy differentiation, while consequence-aware scoring serves as a secondary refinement layer that becomes relevant when multiple modalities are viable at the same locus."
+  "per_case": [
+    {
+      "case_id": "BE_NF1_001",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "BE_CFTR_002",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "BE_COL7A1_003",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "BE_BRCA2_004",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "BE_RB1_005",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "BE_TSC2_006",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "BE_FBN1_007",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "BE_NEG_HBB_008",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "PE_CFTR_009",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "PE_NF1_010",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "PE_BRCA2_011",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "PE_DMD_012",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "PE_PKD1_013",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "PE_COL7A1_014",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "PE_TSC1_015",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "HDR_DMD_016",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "HDR_NF1_017",
+      "aware_top": "NONE",
+      "naive_top": "NONE",
+      "shifted": false,
+      "has_csq_adjustment": false
+    },
+    {
+      "case_id": "HDR_CFTR_018",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "HDR_BRCA2_019",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "HDR_COL7A1_020",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "HDR_RYR1_021",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "HDR_FBN1_022",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "COMP_NF1_023",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "COMP_CFTR_024",
+      "aware_top": "NONE",
+      "naive_top": "NONE",
+      "shifted": false,
+      "has_csq_adjustment": false
+    },
+    {
+      "case_id": "COMP_TSC_025",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "COMP_DMD_026",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "COMP_PKD1_027",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "COMP_RB1_028",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "EDGE_DISTANT_029",
+      "aware_top": "Single-step Prime Editing",
+      "naive_top": "Single-step Prime Editing",
+      "shifted": false,
+      "has_csq_adjustment": true
+    },
+    {
+      "case_id": "EDGE_UTR_030",
+      "aware_top": "Single-step HDR",
+      "naive_top": "Single-step HDR",
+      "shifted": false,
+      "has_csq_adjustment": false
+    }
+  ]
 }
