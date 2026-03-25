@@ -266,6 +266,327 @@ class StrategyScorer:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# TOPSIS Scorer (v3)
+# ═══════════════════════════════════════════════════════════════════════════
+
+import math
+import random as _random
+
+
+@dataclass
+class SensitivityResult:
+    """Result of Monte Carlo sensitivity analysis on strategy rankings.
+
+    Attributes
+    ----------
+    strategy_name : str
+        Name of the strategy.
+    rank_stability : float
+        Fraction of weight permutations where this strategy is top-ranked.
+        Range [0, 1]. Higher = more robust ranking.
+    mean_rank : float
+        Mean rank across all permutations (1 = best).
+    rank_distribution : Dict[int, float]
+        Distribution of ranks: {rank: fraction_of_time}.
+    """
+    strategy_name: str
+    rank_stability: float = 0.0
+    mean_rank: float = 1.0
+    rank_distribution: Dict[int, float] = field(default_factory=dict)
+
+
+class TOPSISScorer:
+    """TOPSIS multi-criteria decision scorer with sensitivity analysis.
+
+    TOPSIS (Technique for Order Preference by Similarity to Ideal Solution)
+    ranks alternatives based on their geometric distance to the ideal and
+    anti-ideal solutions in normalized decision space.
+
+    This is more principled than a simple weighted sum because:
+    1. It penalizes strategies that are terrible on ANY single axis
+       (even if great on others)
+    2. It handles dimensions that shouldn't trade off linearly
+    3. It's a well-established MCDM method (Hwang & Yoon, 1981)
+
+    Sensitivity analysis (Monte Carlo weight perturbation) reports how
+    stable each ranking is across 10,000 random weight vectors. This is
+    the genuinely novel contribution for CRISPR tool scoring.
+
+    Parameters
+    ----------
+    w_safety : float
+        Default weight for safety dimension.
+    w_feasibility : float
+        Default weight for feasibility dimension.
+    w_complexity : float
+        Default weight for complexity dimension.
+    w_risk : float
+        Default weight for risk dimension.
+    w_confidence : float
+        Default weight for confidence dimension.
+    n_sensitivity_runs : int
+        Number of Monte Carlo permutations for sensitivity analysis.
+
+    References
+    ----------
+    Hwang & Yoon, Multiple Attribute Decision Making, Springer, 1981.
+    """
+
+    # Benefit dimensions (higher = better): safety, feasibility, confidence
+    # Cost dimensions (lower = better): complexity, risk
+    _BENEFIT_DIMS = {0, 1, 4}  # safety, feasibility, confidence
+    _COST_DIMS = {2, 3}        # complexity, risk
+    _DIM_NAMES = ["safety", "feasibility", "complexity", "risk", "confidence"]
+
+    def __init__(
+        self,
+        w_safety: float = 0.30,
+        w_feasibility: float = 0.25,
+        w_complexity: float = 0.20,
+        w_risk: float = 0.15,
+        w_confidence: float = 0.10,
+        n_sensitivity_runs: int = 10000,
+    ):
+        total = w_safety + w_feasibility + w_complexity + w_risk + w_confidence
+        self.weights = [
+            w_safety / total,
+            w_feasibility / total,
+            w_complexity / total,
+            w_risk / total,
+            w_confidence / total,
+        ]
+        self.n_sensitivity_runs = n_sensitivity_runs
+        # Also keep a weighted-sum scorer for consequence adjustments
+        self._legacy_scorer = StrategyScorer(
+            w_safety=w_safety,
+            w_feasibility=w_feasibility,
+            w_complexity=w_complexity,
+            w_risk=w_risk,
+            w_confidence=w_confidence,
+        )
+
+    def rank(
+        self,
+        strategies: List[Strategy],
+        bundles: List[FeasibilityBundle],
+        run_sensitivity: bool = True,
+    ) -> List[ScoredStrategy]:
+        """Score and rank strategies using TOPSIS.
+
+        Parameters
+        ----------
+        strategies : list of Strategy
+            Candidate strategies (rejected ones are excluded).
+        bundles : list of FeasibilityBundle
+            Feasibility results for consequence adjustments.
+        run_sensitivity : bool
+            Whether to run Monte Carlo sensitivity analysis.
+
+        Returns
+        -------
+        List[ScoredStrategy]
+            Ranked strategies with TOPSIS scores, sensitivity in metadata.
+        """
+        active = [s for s in strategies if not s.is_rejected]
+        if not active:
+            return []
+
+        # Step 1: Compute raw dimension scores for each strategy
+        dim_matrix = []  # List of [safety, feas, complex, risk, conf]
+        scored_list = []
+        for s in active:
+            scored = self._legacy_scorer.score_strategy(s, bundles)
+            scored_list.append(scored)
+            dim_matrix.append([
+                scored.safety_score,
+                scored.feasibility_score,
+                scored.complexity_score,
+                scored.risk_score,
+                scored.confidence_score,
+            ])
+
+        if len(active) == 1:
+            # Single strategy: skip TOPSIS, just use legacy score
+            scored_list[0].rank = 1
+            return scored_list
+
+        # Step 2: TOPSIS ranking
+        topsis_scores = self._topsis(dim_matrix, self.weights)
+
+        # Step 3: Apply consequence adjustments to TOPSIS score
+        for i, (s, scored) in enumerate(zip(active, scored_list)):
+            consequence_adj = scored.consequence_bonus - scored.consequence_penalty
+            # TOPSIS score is in [0, 1]; consequence adjustment is small (<0.1)
+            adjusted = max(0.0, min(1.0, topsis_scores[i] + consequence_adj))
+            scored.overall_score = round(adjusted, 4)
+
+        # Step 4: Sort by TOPSIS score
+        scored_list.sort(
+            key=lambda x: (x.overall_score, x.safety_score),
+            reverse=True,
+        )
+        for i, s in enumerate(scored_list, 1):
+            s.rank = i
+
+        # Step 5: Sensitivity analysis
+        if run_sensitivity and len(active) >= 2:
+            sensitivity = self._sensitivity_analysis(
+                dim_matrix, scored_list
+            )
+            for scored in scored_list:
+                sr = sensitivity.get(scored.strategy_name)
+                if sr:
+                    scored.annotation_notes.append(
+                        f"Rank stability: {sr.rank_stability:.1%} "
+                        f"(top-ranked in {sr.rank_stability:.1%} of "
+                        f"{self.n_sensitivity_runs} weight permutations)"
+                    )
+                    scored.annotation_notes.append(
+                        f"Mean rank: {sr.mean_rank:.1f}"
+                    )
+
+        return scored_list
+
+    def _topsis(
+        self,
+        matrix: List[List[float]],
+        weights: List[float],
+    ) -> List[float]:
+        """Core TOPSIS algorithm.
+
+        Steps:
+        1. Normalize the decision matrix (vector normalization)
+        2. Apply weights
+        3. Determine ideal (A+) and anti-ideal (A-) solutions
+        4. Compute Euclidean distances to A+ and A-
+        5. Calculate relative closeness: C = D- / (D+ + D-)
+
+        Returns list of TOPSIS scores (0-1, higher = better).
+        """
+        n_alts = len(matrix)
+        n_dims = len(matrix[0])
+
+        # Step 1: Vector normalization
+        # Each value normalized by sqrt(sum of squares in that column)
+        norm = [[0.0] * n_dims for _ in range(n_alts)]
+        for j in range(n_dims):
+            col_sum_sq = sum(matrix[i][j] ** 2 for i in range(n_alts))
+            col_norm = math.sqrt(col_sum_sq) if col_sum_sq > 0 else 1.0
+            for i in range(n_alts):
+                norm[i][j] = matrix[i][j] / col_norm
+
+        # Step 2: Weighted normalized matrix
+        weighted = [[0.0] * n_dims for _ in range(n_alts)]
+        for i in range(n_alts):
+            for j in range(n_dims):
+                weighted[i][j] = norm[i][j] * weights[j]
+
+        # Step 3: Ideal and anti-ideal solutions
+        ideal = [0.0] * n_dims
+        anti_ideal = [0.0] * n_dims
+        for j in range(n_dims):
+            col_vals = [weighted[i][j] for i in range(n_alts)]
+            if j in self._BENEFIT_DIMS:
+                # Benefit: higher is better
+                ideal[j] = max(col_vals)
+                anti_ideal[j] = min(col_vals)
+            else:
+                # Cost: lower is better
+                ideal[j] = min(col_vals)
+                anti_ideal[j] = max(col_vals)
+
+        # Step 4: Euclidean distances
+        dist_to_ideal = []
+        dist_to_anti = []
+        for i in range(n_alts):
+            d_plus = math.sqrt(sum(
+                (weighted[i][j] - ideal[j]) ** 2 for j in range(n_dims)
+            ))
+            d_minus = math.sqrt(sum(
+                (weighted[i][j] - anti_ideal[j]) ** 2 for j in range(n_dims)
+            ))
+            dist_to_ideal.append(d_plus)
+            dist_to_anti.append(d_minus)
+
+        # Step 5: Relative closeness
+        scores = []
+        for i in range(n_alts):
+            denom = dist_to_ideal[i] + dist_to_anti[i]
+            if denom == 0:
+                scores.append(0.5)
+            else:
+                scores.append(dist_to_anti[i] / denom)
+
+        return scores
+
+    def _sensitivity_analysis(
+        self,
+        dim_matrix: List[List[float]],
+        scored_list: List[ScoredStrategy],
+    ) -> Dict[str, SensitivityResult]:
+        """Monte Carlo sensitivity analysis: perturb weights and re-rank.
+
+        Generates n_sensitivity_runs random weight vectors from a Dirichlet
+        distribution centered on the default weights, runs TOPSIS with each,
+        and counts how often each strategy is top-ranked.
+
+        Uses Dirichlet(alpha) where alpha = default_weight * concentration.
+        Concentration=10 means weights vary moderately around defaults.
+        """
+        n_alts = len(dim_matrix)
+        if n_alts < 2:
+            return {}
+
+        strategy_names = [s.strategy_name for s in scored_list]
+        rank_counts = {name: {} for name in strategy_names}  # type: Dict[str, Dict[int, int]]
+        top1_counts = {name: 0 for name in strategy_names}
+
+        # Dirichlet concentration: higher = closer to default weights
+        concentration = 10.0
+        alphas = [w * concentration for w in self.weights]
+
+        rng = _random.Random(42)  # deterministic for reproducibility
+
+        for _ in range(self.n_sensitivity_runs):
+            # Sample from Dirichlet by sampling Gamma and normalizing
+            raw = []
+            for a in alphas:
+                # Gamma sampling via Marsaglia's method (stdlib random.gammavariate)
+                raw.append(rng.gammavariate(a, 1.0))
+            total = sum(raw)
+            perturbed_weights = [r / total for r in raw]
+
+            # Run TOPSIS with perturbed weights
+            topsis_scores = self._topsis(dim_matrix, perturbed_weights)
+
+            # Rank
+            indexed = list(enumerate(topsis_scores))
+            indexed.sort(key=lambda x: x[1], reverse=True)
+
+            for rank, (idx, _score) in enumerate(indexed, 1):
+                name = strategy_names[idx]
+                rank_counts[name][rank] = rank_counts[name].get(rank, 0) + 1
+                if rank == 1:
+                    top1_counts[name] += 1
+
+        # Build results
+        results = {}
+        n = self.n_sensitivity_runs
+        for name in strategy_names:
+            counts = rank_counts[name]
+            mean_rank = sum(r * c for r, c in counts.items()) / n
+            rank_dist = {r: c / n for r, c in sorted(counts.items())}
+            results[name] = SensitivityResult(
+                strategy_name=name,
+                rank_stability=top1_counts[name] / n,
+                mean_rank=round(mean_rank, 2),
+                rank_distribution=rank_dist,
+            )
+
+        return results
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Pipeline Orchestrator
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -309,6 +630,7 @@ class StrategyPipeline:
         # Lazy imports — these modules are created by other phases
         self._fetcher = None
         self._scorer = StrategyScorer()
+        self._topsis_scorer = TOPSISScorer()
 
     def run(
         self,
@@ -406,23 +728,24 @@ class StrategyPipeline:
                 edit_idx = nv.local_seq_edit_index
 
                 if local_seq and edit_idx >= 0:
-                    # Base editing
+                    # Base editing — multi-nuclease evaluation (v3)
+                    # Systematically tests all editor-nuclease combinations:
+                    # ABE8e/BE4max with SpCas9, enFnCas9, SpCas9-NG, SpRY
                     try:
-                        be_result = be_engine.check_feasibility(
-                            nv, local_seq, edit_idx, nuclease=self.nuclease
+                        multi_be_results = be_engine.check_all_editors(
+                            nv, local_seq, edit_idx
                         )
-                        bundle.base_editing_results.append(be_result)
-
-                        # Also check enFnCas9 if primary is SpCas9
-                        if self.nuclease == "SpCas9":
-                            enfn_scanner = EnhancedPAMScanner(nuclease="enFnCas9")
-                            enfn_be = BaseEditingEngine(pam_scanner=enfn_scanner)
-                            enfn_result = enfn_be.check_feasibility(
-                                nv, local_seq, edit_idx, nuclease="enFnCas9"
-                            )
-                            bundle.base_editing_results.append(enfn_result)
+                        bundle.base_editing_results.extend(multi_be_results)
                     except Exception as e:
-                        logger.warning(f"BE check failed for variant {idx}: {e}")
+                        logger.warning(f"BE multi-editor check failed for variant {idx}: {e}")
+                        # Fallback to legacy single-nuclease check
+                        try:
+                            be_result = be_engine.check_feasibility(
+                                nv, local_seq, edit_idx, nuclease=self.nuclease
+                            )
+                            bundle.base_editing_results.append(be_result)
+                        except Exception as e2:
+                            logger.warning(f"BE fallback also failed: {e2}")
 
                     # Prime editing
                     try:
@@ -476,8 +799,16 @@ class StrategyPipeline:
         rejected = [s for s in all_strategies if s.is_rejected]
         viable = [s for s in all_strategies if not s.is_rejected]
 
-        # Stage 5: Score and rank
-        ranked = self._scorer.rank(viable, bundles)
+        # Stage 5: Score and rank using TOPSIS (v3) with sensitivity analysis
+        ranked = self._topsis_scorer.rank(
+            viable, bundles, run_sensitivity=True
+        )
+
+        # Also compute legacy weighted-sum scores for comparison
+        legacy_ranked = self._scorer.rank(viable, bundles)
+        legacy_scores = {
+            s.strategy_name: s.overall_score for s in legacy_ranked
+        }
 
         return PipelineResult(
             transcript=transcript,
@@ -488,10 +819,13 @@ class StrategyPipeline:
             metadata={
                 "cell_type": self.cell_type,
                 "nuclease": self.nuclease,
+                "scoring_method": "TOPSIS",
+                "sensitivity_runs": self._topsis_scorer.n_sensitivity_runs,
                 "n_variants": len(normalized),
                 "n_strategies_generated": len(all_strategies),
                 "n_strategies_rejected": len(rejected),
                 "n_strategies_ranked": len(ranked),
+                "legacy_weighted_sum_scores": legacy_scores,
             },
             warnings=warnings,
         )

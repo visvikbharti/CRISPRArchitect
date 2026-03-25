@@ -279,14 +279,34 @@ NUCLEASE_PARAMS = {
         "hdr_multiplier": 1.0,
         "specificity": "moderate",
         "description": "Standard S. pyogenes Cas9",
+        "reference": "Jinek et al., Science, 2012",
     },
     "enFnCas9": {
-        "pam": "NRG",  # Broadened PAM
+        "pam": "NRG",  # Broadened PAM (R = A or G)
         "cut_type": "staggered_5prime",
         "stagger_bp": 3,  # Estimated
         "hdr_multiplier": 1.5,  # Improved HDR knock-in
         "specificity": "high",  # Single-nucleobase specificity
         "description": "Engineered F. novicida Cas9 (Chakraborty lab)",
+        "reference": "Hirano et al., Cell, 2016; Chakraborty et al., Nat Commun, 2024",
+    },
+    "SpCas9-NG": {
+        "pam": "NG",  # Relaxed PAM
+        "cut_type": "blunt",
+        "stagger_bp": 0,
+        "hdr_multiplier": 1.0,
+        "specificity": "low",  # Broader PAM reduces specificity
+        "description": "SpCas9-NG with relaxed NG PAM requirement",
+        "reference": "Nishimasu et al., Science, 2018",
+    },
+    "SpRY": {
+        "pam": "NNN",  # Near-PAMless (NRN > NYN preference)
+        "cut_type": "blunt",
+        "stagger_bp": 0,
+        "hdr_multiplier": 0.8,  # Slightly reduced activity vs SpCas9
+        "specificity": "very_low",  # Near-PAMless increases off-target risk
+        "description": "SpRY near-PAMless Cas9 variant",
+        "reference": "Walton et al., Science, 2020",
     },
     "Cas12a": {
         "pam": "TTTV",
@@ -295,6 +315,7 @@ NUCLEASE_PARAMS = {
         "hdr_multiplier": 1.4,
         "specificity": "high",
         "description": "Acidaminococcus sp. Cas12a (Cpf1)",
+        "reference": "Zetsche et al., Cell, 2015",
     },
     "vCas9": {
         "pam": "NGG",
@@ -303,5 +324,156 @@ NUCLEASE_PARAMS = {
         "hdr_multiplier": 1.9,  # Mean from Chauhan et al., 2023
         "specificity": "moderate",
         "description": "Staggered-cut SpCas9 variant (MIT)",
+        "reference": "Chauhan et al., PNAS, 2023",
     },
+}
+
+
+# =============================================================================
+# BASE EDITOR PROFILES
+# =============================================================================
+# Each editor profile defines:
+#   - editor_type: "ABE" or "CBE"
+#   - window_start, window_end: 1-indexed editing window in 20-mer protospacer
+#   - compatible_nucleases: list of nucleases this editor has been paired with
+#   - efficiency_class: relative activity level ("high", "moderate", "low")
+#   - evidence_tier: "A" = experimentally characterized, "B" = extrapolated
+#
+# References are cited per-editor for traceability.
+
+BASE_EDITOR_PROFILES = {
+    # ── Adenine Base Editors ────────────────────────────────────────────
+    "ABE7.10": {
+        "editor_type": "ABE",
+        "window_start": 4,
+        "window_end": 7,
+        "compatible_nucleases": ["SpCas9"],
+        "efficiency_class": "moderate",
+        "evidence_tier": "A",
+        "description": "Original ABE with TadA-TadA* heterodimer",
+        "reference": "Gaudelli et al., Nature, 2017",
+    },
+    "ABE8e": {
+        "editor_type": "ABE",
+        "window_start": 3,
+        "window_end": 9,
+        "compatible_nucleases": ["SpCas9", "enFnCas9", "SpCas9-NG", "SpRY"],
+        "efficiency_class": "high",
+        "evidence_tier": "A",
+        "description": "ABE8e with evolved TadA-8e monomer, broader window, higher activity",
+        "reference": "Richter et al., Nat Biotechnol, 2020",
+    },
+    "ABE8e-SpCas9-NG": {
+        "editor_type": "ABE",
+        "window_start": 3,
+        "window_end": 9,
+        "compatible_nucleases": ["SpCas9-NG"],
+        "efficiency_class": "moderate",  # Reduced vs SpCas9 due to NG PAM
+        "evidence_tier": "B",  # Inferred from ABE8e + SpCas9-NG combination
+        "description": "ABE8e fused with SpCas9-NG for NG PAM access",
+        "reference": "Richter et al., 2020; Nishimasu et al., 2018",
+    },
+    "ABE8e-SpRY": {
+        "editor_type": "ABE",
+        "window_start": 3,
+        "window_end": 9,
+        "compatible_nucleases": ["SpRY"],
+        "efficiency_class": "low",  # SpRY has reduced on-target activity
+        "evidence_tier": "B",
+        "description": "ABE8e fused with near-PAMless SpRY",
+        "reference": "Walton et al., Science, 2020; Richter et al., 2020",
+    },
+    "ABE8e-enFnCas9": {
+        "editor_type": "ABE",
+        "window_start": 3,
+        "window_end": 9,
+        "compatible_nucleases": ["enFnCas9"],
+        "efficiency_class": "moderate",
+        "evidence_tier": "B",  # enFnCas9 + ABE8e not directly published
+        "description": "ABE8e paired with enFnCas9 (NRG PAM)",
+        "reference": "Richter et al., 2020; Chakraborty et al., Nat Commun, 2024",
+    },
+    # ── Cytosine Base Editors ───────────────────────────────────────────
+    "BE4max": {
+        "editor_type": "CBE",
+        "window_start": 4,
+        "window_end": 8,
+        "compatible_nucleases": ["SpCas9"],
+        "efficiency_class": "high",
+        "evidence_tier": "A",
+        "description": "Optimized CBE with APOBEC1 + UGI",
+        "reference": "Koblan et al., Nat Biotechnol, 2018",
+    },
+    "BE4max-SpCas9-NG": {
+        "editor_type": "CBE",
+        "window_start": 4,
+        "window_end": 8,
+        "compatible_nucleases": ["SpCas9-NG"],
+        "efficiency_class": "moderate",
+        "evidence_tier": "B",
+        "description": "BE4max with SpCas9-NG for relaxed PAM",
+        "reference": "Koblan et al., 2018; Nishimasu et al., 2018",
+    },
+    "BE4max-SpRY": {
+        "editor_type": "CBE",
+        "window_start": 4,
+        "window_end": 8,
+        "compatible_nucleases": ["SpRY"],
+        "efficiency_class": "low",
+        "evidence_tier": "B",
+        "description": "BE4max with near-PAMless SpRY",
+        "reference": "Walton et al., Science, 2020; Koblan et al., 2018",
+    },
+    "BE4max-enFnCas9": {
+        "editor_type": "CBE",
+        "window_start": 4,
+        "window_end": 8,
+        "compatible_nucleases": ["enFnCas9"],
+        "efficiency_class": "moderate",
+        "evidence_tier": "B",
+        "description": "BE4max paired with enFnCas9 (NRG PAM)",
+        "reference": "Koblan et al., 2018; Chakraborty et al., Nat Commun, 2024",
+    },
+    # ── Legacy aliases (backward compatibility) ─────────────────────────
+    "ABE": {
+        "editor_type": "ABE",
+        "window_start": 4,
+        "window_end": 7,
+        "compatible_nucleases": ["SpCas9"],
+        "efficiency_class": "moderate",
+        "evidence_tier": "A",
+        "description": "Alias for ABE7.10 (legacy)",
+        "reference": "Gaudelli et al., Nature, 2017",
+    },
+    "CBE": {
+        "editor_type": "CBE",
+        "window_start": 4,
+        "window_end": 8,
+        "compatible_nucleases": ["SpCas9"],
+        "efficiency_class": "moderate",
+        "evidence_tier": "A",
+        "description": "Alias for BE4max (legacy)",
+        "reference": "Komor et al., Nature, 2016",
+    },
+}
+
+
+# =============================================================================
+# EDITOR-NUCLEASE COMPATIBILITY MATRIX
+# =============================================================================
+# Which editors work with which nucleases, and with what efficiency modifier.
+# Efficiency modifier: 1.0 = full activity, 0.7 = reduced, etc.
+# These are literature-informed estimates (Tier B evidence).
+
+EDITOR_NUCLEASE_EFFICIENCY = {
+    # (editor_name, nuclease) -> relative_efficiency_modifier
+    ("ABE7.10", "SpCas9"): 1.0,
+    ("ABE8e", "SpCas9"): 1.0,
+    ("ABE8e", "SpCas9-NG"): 0.7,    # Reduced due to NG PAM binding
+    ("ABE8e", "SpRY"): 0.5,          # SpRY has lower on-target activity
+    ("ABE8e", "enFnCas9"): 0.8,      # Inferred; not directly published
+    ("BE4max", "SpCas9"): 1.0,
+    ("BE4max", "SpCas9-NG"): 0.7,
+    ("BE4max", "SpRY"): 0.5,
+    ("BE4max", "enFnCas9"): 0.8,
 }

@@ -51,13 +51,14 @@ from core.feasibility.pam_scan import EnhancedPAMScanner
 
 try:
     from utils.sequence import gc_content, reverse_complement
-    from utils.constants import NUCLEASE_PARAMS
+    from utils.constants import NUCLEASE_PARAMS, BASE_EDITOR_PROFILES, EDITOR_NUCLEASE_EFFICIENCY
 except ImportError:
     from crisprarchitect.utils.sequence import gc_content, reverse_complement
-    from crisprarchitect.utils.constants import NUCLEASE_PARAMS
+    from crisprarchitect.utils.constants import NUCLEASE_PARAMS, BASE_EDITOR_PROFILES, EDITOR_NUCLEASE_EFFICIENCY
 
 
 # ─── Editing windows (1-indexed, PAM-distal = 1) ─────────────────────
+# Legacy defaults for backward compatibility
 # ABE window: positions 4-7 (Gaudelli et al., Nature, 2017)
 ABE_WINDOW_START = 4
 ABE_WINDOW_END = 7
@@ -65,6 +66,26 @@ ABE_WINDOW_END = 7
 # CBE window: positions 4-8 (Komor et al., Nature, 2016)
 CBE_WINDOW_START = 4
 CBE_WINDOW_END = 8
+
+# ─── Multi-editor configuration ──────────────────────────────────────
+# Priority order for editor evaluation. Higher-priority editors are
+# evaluated first; if they find a feasible design, lower-priority
+# alternatives are still evaluated to report all options.
+#
+# Priority rationale:
+#   1. ABE8e/BE4max + SpCas9 (Tier A, highest on-target activity)
+#   2. ABE8e/BE4max + enFnCas9 (Tier B, broader PAM, good activity)
+#   3. ABE8e/BE4max + SpCas9-NG (Tier B, even broader PAM)
+#   4. ABE8e/BE4max + SpRY (Tier B, near-PAMless, lowest activity)
+#   5. Legacy ABE7.10 + SpCas9 (Tier A, narrower window)
+
+_DEFAULT_EDITOR_PRIORITY = [
+    "ABE8e", "BE4max",                   # Best editors with default SpCas9
+    "ABE8e-enFnCas9", "BE4max-enFnCas9", # enFnCas9 variants (NRG PAM)
+    "ABE8e-SpCas9-NG", "BE4max-SpCas9-NG",  # SpCas9-NG (NG PAM)
+    "ABE8e-SpRY", "BE4max-SpRY",         # SpRY (near-PAMless, last resort)
+    "ABE7.10",                           # Legacy narrow-window ABE
+]
 
 
 # ─── Correction direction map ────────────────────────────────────────
@@ -95,13 +116,42 @@ _TRANSVERSIONS = {
 }
 
 
+def _get_editor_window(editor_name: str) -> Tuple[int, int]:
+    """Return (window_start, window_end) for a named editor.
+
+    Falls back to legacy ABE/CBE windows if editor is not in profiles.
+    """
+    profile = BASE_EDITOR_PROFILES.get(editor_name)
+    if profile:
+        return profile["window_start"], profile["window_end"]
+    # Legacy fallback
+    if "ABE" in editor_name.upper():
+        return ABE_WINDOW_START, ABE_WINDOW_END
+    return CBE_WINDOW_START, CBE_WINDOW_END
+
+
+def _get_nucleases_for_editor(editor_name: str) -> List[str]:
+    """Return list of compatible nucleases for a named editor."""
+    profile = BASE_EDITOR_PROFILES.get(editor_name)
+    if profile:
+        return list(profile["compatible_nucleases"])
+    # Legacy fallback
+    return ["SpCas9"]
+
+
 class BaseEditingEngine:
     """Assess base-editing feasibility for a single-nucleotide variant.
+
+    Supports multi-nuclease evaluation: systematically tests all compatible
+    editor-nuclease combinations (ABE8e + SpCas9, ABE8e + enFnCas9,
+    ABE8e + SpCas9-NG, ABE8e + SpRY, etc.) and returns results for each.
 
     Parameters
     ----------
     pam_scanner : EnhancedPAMScanner
         Pre-configured scanner instance (carries nuclease info).
+        Used as the primary scanner; additional nucleases are instantiated
+        on demand for multi-nuclease evaluation.
 
     References
     ----------
@@ -109,10 +159,27 @@ class BaseEditingEngine:
     Gaudelli et al., Nature, 2017 (ABE mechanism and activity window)
     Rees & Liu, Nat Rev Genet, 2018 (base editing review)
     Richter et al., Nat Biotechnol, 2020 (ABE8e improved efficiency)
+    Nishimasu et al., Science, 2018 (SpCas9-NG)
+    Walton et al., Science, 2020 (SpRY near-PAMless)
+    Chakraborty et al., Nat Commun, 2024 (enFnCas9)
     """
 
     def __init__(self, pam_scanner: EnhancedPAMScanner) -> None:
         self.scanner = pam_scanner
+        # Cache scanners for different nucleases to avoid re-creation
+        self._scanner_cache: Dict[str, EnhancedPAMScanner] = {
+            pam_scanner.nuclease: pam_scanner
+        }
+
+    def _get_scanner(self, nuclease: str) -> Optional[EnhancedPAMScanner]:
+        """Get or create a PAM scanner for the given nuclease."""
+        if nuclease in self._scanner_cache:
+            return self._scanner_cache[nuclease]
+        if nuclease not in NUCLEASE_PARAMS:
+            return None
+        scanner = EnhancedPAMScanner(nuclease)
+        self._scanner_cache[nuclease] = scanner
+        return scanner
 
     def check_feasibility(
         self,
@@ -334,6 +401,328 @@ class BaseEditingEngine:
             warnings=warnings,
             metadata={"editor": editor_type, "editable_bystanders": bystander_count},
         )
+
+    def check_all_editors(
+        self,
+        variant: NormalizedVariant,
+        local_sequence: str,
+        edit_pos_in_sequence: int,
+        editor_names: Optional[List[str]] = None,
+    ) -> List[BaseEditingFeasibility]:
+        """Evaluate ALL editor-nuclease combinations for a variant.
+
+        This is the v3 multi-nuclease entry point. It systematically tests
+        each editor in the priority list with all its compatible nucleases.
+
+        Parameters
+        ----------
+        variant : NormalizedVariant
+            The fully annotated variant.
+        local_sequence : str
+            Genomic sequence window around the variant.
+        edit_pos_in_sequence : int
+            0-based index of the target base within *local_sequence*.
+        editor_names : list of str, optional
+            Editor names to evaluate. If None, uses _DEFAULT_EDITOR_PRIORITY.
+
+        Returns
+        -------
+        List[BaseEditingFeasibility]
+            One result per editor-nuclease combination that was evaluated.
+            Sorted by score (best first). NOT_FEASIBLE results are included
+            for transparency (shows why certain editors were rejected).
+        """
+        ref = variant.input.ref_allele.upper()
+        alt = variant.input.alt_allele.upper()
+
+        # ── Quick reject: not an SNV ──────────────────────────────────
+        if len(ref) != 1 or len(alt) != 1:
+            return [BaseEditingFeasibility(
+                label=FeasibilityLabel.NOT_FEASIBLE,
+                rejection_reason="Base editing requires single-nucleotide variants.",
+            )]
+
+        # ── Quick reject: transversion ────────────────────────────────
+        if (alt, ref) in _TRANSVERSIONS:
+            return [BaseEditingFeasibility(
+                label=FeasibilityLabel.NOT_FEASIBLE,
+                rejection_reason=(
+                    f"Transversion {alt}->{ref} cannot be corrected by any base editor."
+                ),
+            )]
+
+        # ── Determine editor type ─────────────────────────────────────
+        correction_key = (alt, ref)
+        if correction_key not in _CORRECTION_MAP:
+            return [BaseEditingFeasibility(
+                label=FeasibilityLabel.NOT_FEASIBLE,
+                rejection_reason=f"No base editor maps the correction {alt}->{ref}.",
+            )]
+
+        editor_type, target_base_in_proto = _CORRECTION_MAP[correction_key]
+
+        # ── Filter editor list to matching type ───────────────────────
+        if editor_names is None:
+            editor_names = _DEFAULT_EDITOR_PRIORITY
+
+        matching_editors = []
+        for name in editor_names:
+            profile = BASE_EDITOR_PROFILES.get(name)
+            if profile and profile["editor_type"] == editor_type:
+                matching_editors.append(name)
+        # Legacy fallback
+        if not matching_editors:
+            matching_editors = [editor_type]  # "ABE" or "CBE" legacy
+
+        # ── Construct patient sequence ────────────────────────────────
+        patient_sequence = (
+            local_sequence[:edit_pos_in_sequence]
+            + alt
+            + local_sequence[edit_pos_in_sequence + len(ref):]
+        )
+
+        # ── Evaluate each editor-nuclease combination ─────────────────
+        results: List[BaseEditingFeasibility] = []
+        seen_nucleases: Dict[str, List[GuideCandidate]] = {}
+
+        for editor_name in matching_editors:
+            window_start, window_end = _get_editor_window(editor_name)
+            nucleases = _get_nucleases_for_editor(editor_name)
+            profile = BASE_EDITOR_PROFILES.get(editor_name, {})
+            evidence_tier = profile.get("evidence_tier", "B")
+
+            for nuc in nucleases:
+                # Get or create scanner
+                scanner = self._get_scanner(nuc)
+                if scanner is None:
+                    continue
+
+                # Scan for guides (cache to avoid re-scanning same nuclease)
+                if nuc not in seen_nucleases:
+                    guides = scanner.scan(
+                        local_sequence, edit_pos_in_sequence, window_bp=50
+                    )
+                    seen_nucleases[nuc] = guides
+                else:
+                    guides = seen_nucleases[nuc]
+
+                if not guides:
+                    results.append(BaseEditingFeasibility(
+                        label=FeasibilityLabel.NOT_FEASIBLE,
+                        editor_type=editor_type,
+                        compatible_nucleases=[nuc],
+                        rejection_reason=(
+                            f"No {nuc} PAM ({NUCLEASE_PARAMS[nuc]['pam']}) found "
+                            f"near the target for {editor_name}."
+                        ),
+                        metadata={
+                            "editor": editor_name,
+                            "nuclease": nuc,
+                            "evidence_tier": evidence_tier,
+                        },
+                    ))
+                    continue
+
+                # Evaluate with specific window
+                best_result = self._pick_best_guide_with_window(
+                    guides, patient_sequence, edit_pos_in_sequence,
+                    editor_type, target_base_in_proto,
+                    window_start, window_end,
+                )
+
+                if best_result is None:
+                    results.append(BaseEditingFeasibility(
+                        label=FeasibilityLabel.NOT_FEASIBLE,
+                        editor_type=editor_type,
+                        compatible_nucleases=[nuc],
+                        rejection_reason=(
+                            f"No {nuc} guide places {target_base_in_proto} in "
+                            f"{editor_name} window ({window_start}-{window_end})."
+                        ),
+                        metadata={
+                            "editor": editor_name,
+                            "nuclease": nuc,
+                            "evidence_tier": evidence_tier,
+                        },
+                    ))
+                    continue
+
+                guide, pos_in_window, bystander_count, bystander_positions = best_result
+
+                # Classify bystanders
+                bystander_consequences, consequence_penalty_total = (
+                    self._classify_bystanders(variant, bystander_positions)
+                )
+
+                # Apply efficiency modifier for this editor-nuclease combo
+                eff_modifier = EDITOR_NUCLEASE_EFFICIENCY.get(
+                    (editor_name.split("-")[0] if "-" in editor_name else editor_name, nuc),
+                    0.7,  # conservative default
+                )
+
+                # Warnings
+                warnings: List[str] = []
+                if bystander_count > 0:
+                    warnings.append(
+                        f"{bystander_count} bystander(s) at positions {bystander_positions}."
+                    )
+                if bystander_count >= 3:
+                    warnings.append("High bystander burden.")
+                if evidence_tier == "B":
+                    warnings.append(
+                        f"{editor_name}+{nuc} is Tier B evidence "
+                        f"(extrapolated, not directly published as combination)."
+                    )
+                if eff_modifier < 0.7:
+                    warnings.append(
+                        f"Reduced on-target activity expected ({eff_modifier:.0%} "
+                        f"vs SpCas9 baseline)."
+                    )
+
+                # Label
+                label = FeasibilityLabel.FEASIBLE
+                if bystander_count >= 3:
+                    label = FeasibilityLabel.MARGINAL
+                if eff_modifier < 0.6:
+                    label = FeasibilityLabel.MARGINAL
+
+                # Score
+                window_center = (window_start + window_end) / 2.0
+                centrality = 1.0 - abs(pos_in_window - window_center) / (window_end - window_start + 1)
+                score = max(0.0, (
+                    guide.score * eff_modifier
+                    + 0.20 * centrality
+                    - consequence_penalty_total
+                ))
+
+                guide.position_in_window = pos_in_window
+
+                results.append(BaseEditingFeasibility(
+                    label=label,
+                    editor_type=editor_type,
+                    best_guide=guide,
+                    target_position_in_window=pos_in_window,
+                    bystander_count=bystander_count,
+                    bystander_positions=bystander_positions,
+                    bystander_consequences=bystander_consequences,
+                    compatible_nucleases=[nuc],
+                    score=round(score, 4),
+                    warnings=warnings,
+                    metadata={
+                        "editor": editor_name,
+                        "nuclease": nuc,
+                        "evidence_tier": evidence_tier,
+                        "efficiency_modifier": eff_modifier,
+                        "window": f"{window_start}-{window_end}",
+                        "editable_bystanders": bystander_count,
+                    },
+                ))
+
+        # Sort by score (best first), feasible before non-feasible
+        results.sort(
+            key=lambda r: (
+                0 if r.label == FeasibilityLabel.NOT_FEASIBLE else 1,
+                r.score,
+            ),
+            reverse=True,
+        )
+        return results
+
+    def _classify_bystanders(
+        self,
+        variant: NormalizedVariant,
+        bystander_positions: List[int],
+    ) -> Tuple[List[ConsequenceType], float]:
+        """Classify bystander consequences and compute total penalty."""
+        bystander_consequences: List[ConsequenceType] = []
+        penalty_total = 0.0
+
+        PENALTIES = {
+            ConsequenceType.SYNONYMOUS: 0.00,
+            ConsequenceType.MISSENSE: 0.10,
+            ConsequenceType.NONSENSE: 0.25,
+            ConsequenceType.SPLICE_DONOR: 0.20,
+            ConsequenceType.SPLICE_ACCEPTOR: 0.20,
+            ConsequenceType.SPLICE_REGION: 0.08,
+        }
+
+        for _bp in bystander_positions:
+            try:
+                coord = variant.transcript_coord
+                if coord and coord.in_cds and coord.reference_codon:
+                    bystander_consequences.append(ConsequenceType.UNKNOWN)
+                    penalty_total += 0.05
+                else:
+                    bystander_consequences.append(ConsequenceType.UNKNOWN)
+                    penalty_total += 0.05
+            except (AttributeError, TypeError):
+                bystander_consequences.append(ConsequenceType.UNKNOWN)
+                penalty_total += 0.05
+
+        return bystander_consequences, penalty_total
+
+    @staticmethod
+    def _pick_best_guide_with_window(
+        guides: List[GuideCandidate],
+        local_sequence: str,
+        edit_pos: int,
+        editor_type: str,
+        target_base: str,
+        window_start: int,
+        window_end: int,
+    ) -> Optional[Tuple[GuideCandidate, int, int, List[int]]]:
+        """Like _pick_best_guide but with configurable window bounds.
+
+        This is the core method for multi-editor evaluation — different editors
+        have different editing windows (e.g., ABE7.10: 4-7, ABE8e: 3-9).
+        """
+        best = None  # type: Optional[Tuple[GuideCandidate, int, int, List[int]]]
+        best_score = -1.0
+
+        for guide in guides:
+            if guide.strand == "+":
+                proto_start_fwd = guide.cut_position - 17
+                pos_in_proto = edit_pos - proto_start_fwd + 1
+            else:
+                proto_start_fwd = guide.cut_position - 2
+                pos_in_proto = 20 - (edit_pos - proto_start_fwd)
+
+            if pos_in_proto < window_start or pos_in_proto > window_end:
+                continue
+
+            proto_idx = pos_in_proto - 1
+            if proto_idx < 0 or proto_idx >= 20:
+                continue
+
+            if guide.strand == "+":
+                patient_proto_start = guide.cut_position - 17
+                patient_proto = local_sequence[patient_proto_start:patient_proto_start + 20].upper()
+            else:
+                patient_proto_start = guide.cut_position - 2
+                patient_proto = local_sequence[patient_proto_start:patient_proto_start + 20].upper()
+                comp = {'A': 'T', 'T': 'A', 'G': 'C', 'C': 'G', 'N': 'N'}
+                patient_proto = ''.join(comp.get(b, 'N') for b in reversed(patient_proto))
+
+            if len(patient_proto) < 20:
+                continue
+            if patient_proto[proto_idx] != target_base:
+                continue
+
+            bystander_positions: List[int] = []
+            for w_pos in range(window_start, window_end + 1):
+                if w_pos == pos_in_proto:
+                    continue
+                w_idx = w_pos - 1
+                if 0 <= w_idx < len(patient_proto) and patient_proto[w_idx] == target_base:
+                    bystander_positions.append(w_pos)
+            bystander_count = len(bystander_positions)
+
+            composite = guide.score - 0.10 * bystander_count
+            if composite > best_score:
+                best_score = composite
+                best = (guide, pos_in_proto, bystander_count, bystander_positions)
+
+        return best
 
     # ── internals ─────────────────────────────────────────────────────
 

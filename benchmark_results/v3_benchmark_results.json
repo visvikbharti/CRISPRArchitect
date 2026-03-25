@@ -1,0 +1,355 @@
+{
+  "n_cases": 30,
+  "top1_accuracy": 0.8666666666666667,
+  "top3_accuracy": 0.9666666666666667,
+  "rejection_accuracy": 0.8666666666666667,
+  "consequence_shift_fraction": 0.0,
+  "case_results": [
+    {
+      "case_id": "BE_NF1_001",
+      "top_strategy": "Single-step Prime Editing",
+      "top3_strategies": [
+        "Single-step Prime Editing",
+        "Single-step Base Editing",
+        "Single-step HDR"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "BE_CFTR_002",
+      "top_strategy": "Single-step Prime Editing",
+      "top3_strategies": [
+        "Single-step Prime Editing",
+        "Single-step Base Editing",
+        "Single-step HDR"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "BE_COL7A1_003",
+      "top_strategy": "Single-step Prime Editing",
+      "top3_strategies": [
+        "Single-step Prime Editing",
+        "Single-step HDR",
+        "Single-step Base Editing"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "BE_BRCA2_004",
+      "top_strategy": "Single-step Base Editing",
+      "top3_strategies": [
+        "Single-step Base Editing",
+        "Single-step Prime Editing",
+        "Single-step HDR"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "BE_RB1_005",
+      "top_strategy": "Single-step Prime Editing",
+      "top3_strategies": [
+        "Single-step Prime Editing",
+        "Single-step Base Editing",
+        "Single-step HDR"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "BE_TSC2_006",
+      "top_strategy": "Single-step Base Editing",
+      "top3_strategies": [
+        "Single-step Base Editing",
+        "Single-step Prime Editing",
+        "Single-step HDR"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "BE_FBN1_007",
+      "top_strategy": "Single-step Base Editing",
+      "top3_strategies": [
+        "Single-step Base Editing",
+        "Single-step Prime Editing",
+        "Single-step HDR"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "BE_NEG_HBB_008",
+      "top_strategy": "Single-step Prime Editing",
+      "top3_strategies": [
+        "Single-step Prime Editing",
+        "Single-step HDR"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "PE_CFTR_009",
+      "top_strategy": "Single-step Prime Editing",
+      "top3_strategies": [
+        "Single-step Prime Editing",
+        "Single-step HDR"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "PE_NF1_010",
+      "top_strategy": "Single-step Prime Editing",
+      "top3_strategies": [
+        "Single-step Prime Editing",
+        "Single-step HDR"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "PE_BRCA2_011",
+      "top_strategy": "Single-step Prime Editing",
+      "top3_strategies": [
+        "Single-step Prime Editing",
+        "Single-step HDR"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "PE_DMD_012",
+      "top_strategy": "Single-step Prime Editing",
+      "top3_strategies": [
+        "Single-step Prime Editing",
+        "Single-step HDR"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "PE_PKD1_013",
+      "top_strategy": "Single-step Prime Editing",
+      "top3_strategies": [
+        "Single-step Prime Editing",
+        "Single-step HDR"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "PE_COL7A1_014",
+      "top_strategy": "Single-step Prime Editing",
+      "top3_strategies": [
+        "Single-step Prime Editing",
+        "Single-step HDR"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "PE_TSC1_015",
+      "top_strategy": "Single-step Prime Editing",
+      "top3_strategies": [
+        "Single-step Prime Editing",
+        "Single-step HDR"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "HDR_DMD_016",
+      "top_strategy": "Single-step Prime Editing",
+      "top3_strategies": [
+        "Single-step Prime Editing",
+        "Single-step HDR"
+      ],
+      "top1_correct": false,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "HDR_NF1_017",
+      "top_strategy": "Single-step Prime Editing",
+      "top3_strategies": [
+        "Single-step Prime Editing",
+        "Single-step HDR"
+      ],
+      "top1_correct": false,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "HDR_CFTR_018",
+      "top_strategy": "Single-step Prime Editing",
+      "top3_strategies": [
+        "Single-step Prime Editing",
+        "Single-step HDR"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "HDR_BRCA2_019",
+      "top_strategy": "Single-step Base Editing",
+      "top3_strategies": [
+        "Single-step Base Editing",
+        "Single-step Prime Editing",
+        "Single-step Prime Editing"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "HDR_COL7A1_020",
+      "top_strategy": "Single-step Prime Editing",
+      "top3_strategies": [
+        "Single-step Prime Editing",
+        "Single-step Prime Editing",
+        "Dual Prime Editing"
+      ],
+      "top1_correct": false,
+      "top3_correct": false,
+      "error": ""
+    },
+    {
+      "case_id": "HDR_RYR1_021",
+      "top_strategy": "Single-step Prime Editing",
+      "top3_strategies": [
+        "Single-step Prime Editing",
+        "Single-step Prime Editing",
+        "Dual Prime Editing"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "HDR_FBN1_022",
+      "top_strategy": "Single-step Prime Editing",
+      "top3_strategies": [
+        "Single-step Prime Editing",
+        "Single-step HDR"
+      ],
+      "top1_correct": false,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "COMP_NF1_023",
+      "top_strategy": "Single-step Prime Editing",
+      "top3_strategies": [
+        "Single-step Prime Editing",
+        "Single-step Prime Editing",
+        "Dual Prime Editing"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "COMP_CFTR_024",
+      "top_strategy": "Single-step Prime Editing",
+      "top3_strategies": [
+        "Single-step Prime Editing",
+        "Single-step Prime Editing",
+        "Dual Prime Editing"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "COMP_TSC_025",
+      "top_strategy": "Single-step Base Editing",
+      "top3_strategies": [
+        "Single-step Base Editing",
+        "Single-step Prime Editing",
+        "Single-step Prime Editing"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "COMP_DMD_026",
+      "top_strategy": "Single-step Prime Editing",
+      "top3_strategies": [
+        "Single-step Prime Editing",
+        "Single-step Prime Editing",
+        "Dual Prime Editing"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "COMP_PKD1_027",
+      "top_strategy": "Single-step Base Editing",
+      "top3_strategies": [
+        "Single-step Base Editing",
+        "Single-step Prime Editing",
+        "Single-step Prime Editing"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "COMP_RB1_028",
+      "top_strategy": "Single-step Prime Editing",
+      "top3_strategies": [
+        "Single-step Prime Editing",
+        "Single-step Prime Editing",
+        "Dual Prime Editing"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "EDGE_DISTANT_029",
+      "top_strategy": "Single-step Prime Editing",
+      "top3_strategies": [
+        "Single-step Prime Editing",
+        "Single-step Prime Editing",
+        "Dual Prime Editing"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    },
+    {
+      "case_id": "EDGE_UTR_030",
+      "top_strategy": "Single-step HDR",
+      "top3_strategies": [
+        "Single-step HDR"
+      ],
+      "top1_correct": true,
+      "top3_correct": true,
+      "error": ""
+    }
+  ]
+}
