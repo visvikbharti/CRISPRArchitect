@@ -95,6 +95,23 @@ except ImportError:
     _V2_PAGE_AVAILABLE = False
 
 # ---------------------------------------------------------------------------
+# v3 Strategy Analysis page
+# ---------------------------------------------------------------------------
+_V3_PAGE_AVAILABLE = False
+try:
+    try:
+        from webapp.app_v3_page import (
+            render_v3_sidebar, page_v3_analysis, run_v3_pipeline,
+        )
+    except ImportError:
+        from app_v3_page import (
+            render_v3_sidebar, page_v3_analysis, run_v3_pipeline,
+        )
+    _V3_PAGE_AVAILABLE = True
+except ImportError:
+    _V3_PAGE_AVAILABLE = False
+
+# ---------------------------------------------------------------------------
 # Plotly / matplotlib imports
 # ---------------------------------------------------------------------------
 try:
@@ -151,15 +168,17 @@ for key, val in _DEFAULTS.items():
 # ===================================================================
 PAGES = {
     "Home": "home",
+}
+if _V3_PAGE_AVAILABLE:
+    PAGES["v3: Strategy Analysis"] = "v3_analysis"
+PAGES.update({
     "Gene & Mutation Setup": "setup",
     "Strategy Optimizer (MOSAIC)": "mosaic",
     "Conversion Tract Simulator": "conversion",
-    "3D Distance & Risk (ChromBridge)": "chrombridge",
-    "Donor Quality Check (TopoPred)": "topopred",
     "Full Analysis Report": "report",
-}
+})
 if _V2_PAGE_AVAILABLE:
-    PAGES["v2: Variant Analysis"] = "v2_analysis"
+    PAGES["v2: Variant Analysis (legacy)"] = "v2_analysis"
 
 with st.sidebar:
     st.markdown(
@@ -196,6 +215,13 @@ with st.sidebar:
         f"**Cell type:** {st.session_state.get('cell_type', 'N/A')}  \n"
         f"**Nuclease:** {st.session_state.get('nuclease', 'N/A')}"
     )
+
+# --- v3 sidebar: render variant inputs when v3 page is selected ---
+_v3_params = None
+if _V3_PAGE_AVAILABLE and page == "v3_analysis":
+    _v3_params = render_v3_sidebar()
+    if _v3_params is not None:
+        run_v3_pipeline(_v3_params)
 
 # --- v2 sidebar: render variant inputs when v2 page is selected ---
 _v2_params = None
@@ -2043,10 +2069,10 @@ PAGE_FUNCTIONS = {
     "setup": page_setup,
     "mosaic": page_mosaic,
     "conversion": page_conversion,
-    # "chrombridge": page_chrombridge,  # Removed in v3 cleanup
-    # "topopred": page_topopred,        # Removed in v3 cleanup
     "report": page_report,
 }
+if _V3_PAGE_AVAILABLE:
+    PAGE_FUNCTIONS["v3_analysis"] = page_v3_analysis
 if _V2_PAGE_AVAILABLE:
     PAGE_FUNCTIONS["v2_analysis"] = page_v2_analysis
 
