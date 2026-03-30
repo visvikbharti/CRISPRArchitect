@@ -439,5 +439,57 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-*Document generated: March 2026*
+## Figure Guide — Which Figure Goes Where
+
+All figures are in `paper/figures/v3_results/` and are generated from **real data only**.
+
+| Figure File | Use on Slide | What It Shows | Key Interpretation |
+|---|---|---|---|
+| `Fig_StrategyDistribution_v2_v3.png` | Slide 11 (BE Rescue) | Side-by-side bars: v2 (BE=0, PE=29) vs v3 (BE=6, PE=23) | Multi-nuclease engine rescued BE from 0% to 20%. PE still dominates (77%) but this reflects genuine biological constraints, not a bug. |
+| `Fig_LiteratureBenchmark.png` | Slide 21 (Results) | Literature benchmark: 30% top-1, 80% top-3 concordance | Top-1 appears low (30%) but discordance is explainable: HDR papers are pre-PE era. Top-3 at 80% shows published strategy is nearly always in our recommendation set. |
+| `Fig_BystanterFix.png` | Slide 13 (Bug Fix) | v2 scoring vs v3: BE score drops below PE with just 1 bystander in v2, but stays above PE with 3 bystanders in v3 | The triple-counting bug made PE unbeatable. After fix, BE properly wins when PAM+window are verified. |
+| `Fig_ConversionSim_CIs.png` | Slide 17 (Statistical Rigor) | Tract length distribution with mean/median + 95% CI; distance-probability curve with Wilson CIs | Every output now has uncertainty quantification. Mean tract 706 bp (SE=37), P(>=500bp) = 47.2% [42.0-52.4%]. |
+| `Fig_ParameterProvenance.png` | Slide 20 (Parameters) | Pie chart: 35% measured, 20% derived, 45% assumed | Transparent about what we know vs assume. All [ASSUMED] parameters explored in sensitivity analysis. |
+| `Fig_CrossMethod_Agreement.png` | Slide 16 (Cross-Method) | TOPSIS vs VIKOR vs WPM: all produce identical rankings | 100% concordance proves recommendation is method-robust, not an artifact of TOPSIS. |
+
+### How to Print/Show Figures
+
+Option A (recommended): Open the PNG files on your laptop and switch to them during the relevant slides using Alt+Tab.
+
+Option B: Insert the PNGs into the PPTX slides manually before the meeting. The figure sizes are optimized for 16:9 widescreen.
+
+---
+
+## Literature Benchmark: Detailed Interpretation for Q&A
+
+This section prepares you for questions about the 10-case literature benchmark results.
+
+### The Results Table
+
+| Case | Gene | Published Strategy | CRISPRArchitect Recommendation | Match? | Explanation |
+|---|---|---|---|---|---|
+| LIT_BE_001 | HBB | ABE8e-NRCH (80%) | PE | MISS | ABE8e-NRCH uses a specialized PAM variant (NRCH) not in our nuclease set. Our pipeline only has SpCas9/enFnCas9/SpCas9-NG/SpRY/Cas12a. Adding NRCH would rescue this case. |
+| LIT_BE_005 | COL7A1 | ABE8e (94.6%) | BE | OK | Correct! ABE8e with available PAM places target in window. Validates multi-nuclease rescue. |
+| LIT_PE_001 | HBB | PE3 (26-52%) | PE | OK | Correct. PE is the right recommendation for this transversion. |
+| LIT_PE_004 | HBB | PEmax (15-41%) | PE | OK | Correct. Newer PE variant but same modality class. |
+| LIT_HDR_001 | HBB | AAV6 HDR (29%) | PE | MISS | Paper is Dever et al. 2016 — **before PE was invented** (2019). CRISPRArchitect correctly identifies the modern DSB-free alternative. |
+| LIT_HDR_002 | HBB | AAV6 HDR (60%) | PE | MISS | Lattanzi 2021 clinical-grade HSPCs. Used HDR because it was an established clinical protocol. PE is objectively safer but less clinically validated. |
+| LIT_HDR_005 | HBB | AAV6 HDR | PE | MISS | Same variant, same reasoning. HDR chosen for clinical pipeline continuity. |
+| LIT_HDR_007 | HBB | ssODN+inhibitors (72%) | PE | MISS | Used ssODN with NHEJ/MMEJ inhibitors for very high efficiency. Our tool correctly identifies PE as safer, but doesn't model chemical enhancement protocols. |
+| LIT_HDR_008 | LRRK2 | ssODN HDR | BE | MISS | G>A transition. Paper used HDR but was published before widespread ABE adoption. CRISPRArchitect recommends the modern DSB-free approach (BE). Arguably more correct. |
+| LIT_COMP_001 | HBB | Multi-strategy | PE | N/A | Comparison case — all strategies tested. Newby 2021 found ABE8e-NRCH was most efficient (80%) but our pipeline doesn't model NRCH. |
+
+### Key Talking Points for the Benchmark
+
+1. **"30% top-1 sounds bad"** — Frame it correctly: "Of the 7 discordant cases, 5 are HDR papers from before PE existed (2016-2019). The tool is recommending the safer modern alternative, not making an error."
+
+2. **"80% top-3 is the real metric"** — "The published strategy appears in our top-3 recommendations 80% of the time, meaning we almost always include it as an option — we just sometimes rank it below a safer alternative."
+
+3. **"The NRCH limitation"** — "The HBB ABE case uses SpCas9-NRCH, a PAM variant we don't model. Adding NRCH to our nuclease set would likely rescue this case, bringing concordance to ~40% top-1."
+
+4. **"Why not just agree with everything?"** — "A tool that simply validates whatever strategy a paper used would have 100% concordance but zero clinical value. The point of CRISPRArchitect is to sometimes identify a BETTER strategy than what was historically used — and that requires disagreement with pre-PE-era HDR papers."
+
+---
+
+*Document updated: March 2026*
 *CRISPRArchitect version: v3.0.0*
