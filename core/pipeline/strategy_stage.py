@@ -1251,7 +1251,7 @@ class StrategyPipeline:
             s.strategy_name: s.overall_score for s in legacy_ranked
         }
 
-        return PipelineResult(
+        result = PipelineResult(
             transcript=transcript,
             variants=normalized,
             bundles=bundles,
@@ -1270,6 +1270,48 @@ class StrategyPipeline:
             },
             warnings=warnings,
         )
+
+        # Stage 6: Post-ranking delivery annotations
+        # Annotates each ranked strategy with delivery feasibility,
+        # donor format recommendations, and cell-type-specific warnings.
+        # Does NOT change TOPSIS scores or rankings.
+        try:
+            from core.feasibility.delivery_advisor import DeliveryAdvisor
+            delivery_advisor = DeliveryAdvisor(cell_type=self.cell_type)
+            delivery_result = delivery_advisor.advise(result)
+            result.metadata["delivery_advisory"] = {
+                "n_annotated": len(delivery_result.annotations),
+                "global_warnings": delivery_result.global_warnings,
+                "annotations": [
+                    {
+                        "strategy": ann.strategy_name,
+                        "deliverable": ann.is_deliverable,
+                        "method": ann.delivery_method,
+                        "complexity": ann.delivery_complexity,
+                        "donor_format": (
+                            ann.donor_recommendation.format
+                            if ann.donor_recommendation else None
+                        ),
+                        "warnings": ann.warnings,
+                        "enhancers": ann.viability_enhancers,
+                        "violations": ann.hard_constraint_violations,
+                    }
+                    for ann in delivery_result.annotations
+                ],
+            }
+            # Add delivery warnings to pipeline warnings
+            for ann in delivery_result.annotations:
+                for violation in ann.hard_constraint_violations:
+                    warnings.append(
+                        f"[Delivery] {ann.strategy_name}: {violation}"
+                    )
+        except Exception as e:
+            logger.warning(f"Delivery advisory failed: {e}")
+            result.metadata["delivery_advisory"] = {
+                "error": str(e),
+            }
+
+        return result
 
 
 # ═══════════════════════════════════════════════════════════════════════════

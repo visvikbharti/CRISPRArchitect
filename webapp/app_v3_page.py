@@ -38,7 +38,7 @@ except ImportError as e:
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-CELL_TYPE_OPTIONS = ["iPSC", "HEK293T", "K562"]
+CELL_TYPE_OPTIONS = ["iPSC", "CD34_HSC", "HEK293T", "K562"]
 NUCLEASE_OPTIONS = ["SpCas9", "enFnCas9", "SpCas9-NG", "SpRY", "Cas12a"]
 NUCLEASE_PAMS = {
     "SpCas9": "NGG",
@@ -390,6 +390,128 @@ def _display_strategy_ranking(result: PipelineResult) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Display: Delivery Advisory (post-ranking annotations)
+# ---------------------------------------------------------------------------
+def _delivery_complexity_badge(complexity: int) -> str:
+    """Badge for delivery complexity (1-5 ordinal)."""
+    colors = {1: "#4CAF50", 2: "#8BC34A", 3: "#FF9800", 4: "#F44336", 5: "#B71C1C"}
+    labels = {1: "Simple", 2: "Low", 3: "Moderate", 4: "Complex", 5: "Very Complex"}
+    color = colors.get(complexity, "#757575")
+    label = labels.get(complexity, "?")
+    return (
+        f'<span style="background:{color}; color:white; padding:1px 8px; '
+        f'border-radius:10px; font-size:0.78em; font-weight:600;">'
+        f'Delivery: {label} ({complexity}/5)</span>'
+    )
+
+
+def _display_delivery_advisory(result: PipelineResult) -> None:
+    """Display delivery advisor annotations from pipeline metadata."""
+    delivery = result.metadata.get("delivery_advisory", {})
+    if not delivery or "error" in delivery:
+        return
+
+    annotations = delivery.get("annotations", [])
+    if not annotations:
+        return
+
+    st.markdown(
+        '<div class="section-header">Delivery Recommendations</div>',
+        unsafe_allow_html=True,
+    )
+
+    # Global warnings
+    global_warns = delivery.get("global_warnings", [])
+    for gw in global_warns:
+        st.info(gw)
+
+    for ann in annotations:
+        strategy_name = ann.get("strategy", "")
+        deliverable = ann.get("deliverable", True)
+        method = ann.get("method", "")
+        complexity = ann.get("complexity", 1)
+        donor_format = ann.get("donor_format")
+        warnings = ann.get("warnings", [])
+        enhancers = ann.get("enhancers", [])
+        violations = ann.get("violations", [])
+
+        # Skip if no meaningful delivery info
+        if not method and not donor_format and not warnings:
+            continue
+
+        border_color = "#4CAF50" if deliverable else "#F44336"
+        status_icon = "\u2705" if deliverable else "\u274C"
+
+        html = (
+            f'<div style="border-left:3px solid {border_color}; '
+            f'background:var(--card-bg, #233448); padding:10px 14px; '
+            f'border-radius:5px; margin-bottom:8px;">'
+            f'<div style="display:flex; justify-content:space-between; '
+            f'align-items:center; flex-wrap:wrap; gap:4px;">'
+            f'<strong style="color:var(--text-color,#E0E0E0);">'
+            f'{status_icon} {strategy_name}</strong>'
+            f'<div>{_delivery_complexity_badge(complexity)}</div></div>'
+        )
+
+        # Delivery method
+        if method:
+            html += (
+                f'<div style="font-size:0.85em; margin-top:6px; '
+                f'color:var(--text-color,#E0E0E0);">'
+                f'<span style="opacity:0.6;">Method:</span> {method}</div>'
+            )
+
+        # Donor format
+        if donor_format:
+            fmt_colors = {
+                "ssODN": "#4CAF50", "cssDNA": "#1B9E77",
+                "lssDNA": "#FF9800", "dsDNA": "#F44336", "AAV6": "#3498DB",
+            }
+            fmt_color = fmt_colors.get(donor_format, "#757575")
+            html += (
+                f'<div style="font-size:0.85em; margin-top:3px; '
+                f'color:var(--text-color,#E0E0E0);">'
+                f'<span style="opacity:0.6;">Donor format:</span> '
+                f'<span style="background:{fmt_color}; color:white; '
+                f'padding:1px 8px; border-radius:8px; font-size:0.9em; '
+                f'font-weight:600;">{donor_format}</span></div>'
+            )
+
+        # Violations
+        for v in violations:
+            html += (
+                f'<div style="font-size:0.82em; margin-top:4px; '
+                f'color:#F44336;">\u26A0 {v}</div>'
+            )
+
+        # Warnings
+        for w in warnings:
+            html += (
+                f'<div style="font-size:0.82em; margin-top:3px; '
+                f'color:#FF9800;">\u26A0 {w}</div>'
+            )
+
+        # Viability enhancers (collapsed)
+        if enhancers:
+            html += (
+                f'<div style="font-size:0.78em; margin-top:6px; '
+                f'opacity:0.65; color:var(--text-color,#E0E0E0);">'
+                f'<strong>Viability tips:</strong> '
+                f'{" &bull; ".join(enhancers)}</div>'
+            )
+
+        html += '</div>'
+        st.markdown(html, unsafe_allow_html=True)
+
+    # Evidence note
+    st.caption(
+        "Delivery annotations are post-ranking (do not change TOPSIS scores). "
+        "Evidence: 87 verified references. "
+        "Key: Iyer 2022, Xie 2024, Letort 2025, Ihry 2018, Dever 2016."
+    )
+
+
+# ---------------------------------------------------------------------------
 # Display: Feasibility Breakdown
 # ---------------------------------------------------------------------------
 def _display_feasibility(result: PipelineResult) -> None:
@@ -581,6 +703,9 @@ def page_v3_analysis() -> None:
 
     # Strategy ranking
     _display_strategy_ranking(result)
+
+    # Delivery advisor annotations
+    _display_delivery_advisory(result)
 
     # Feasibility
     _display_feasibility(result)

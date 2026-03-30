@@ -52,8 +52,44 @@ python cli.py simulate --cell iPSC --nuclease enFnCas9 --donor cssDNA -n 10000
 **What to say:**
 > "This runs 10,000 Monte Carlo simulations of HDR with enFnCas9 and a cssDNA donor in iPSCs. Notice the confidence intervals — every number has uncertainty quantification. The HDR rate is about 3.5% with a 95% CI of 3.2 to 3.9%."
 
+## Demo 4: Webapp — Full v3 Pipeline with Delivery Advisor (3 minutes)
+
+If the audience wants to see the visual interface:
+
+### Launch
+```bash
+streamlit run webapp/app.py
+```
+Opens http://localhost:8501
+
+### Quick webapp walkthrough
+1. Sidebar → **v3: Strategy Analysis**
+2. Enter: Gene **COL7A1**, Chromosome **3**, Position **48580586**, Ref **C**, Alt **T**
+3. Cell type: **iPSC**, Nuclease: **SpCas9**
+4. Click **"Analyze Variant"** → wait ~10 seconds
+
+**What to show:**
+- **Variant annotation card** — consequence, HGVS, ref validation
+- **TOPSIS ranking** — 6D scores, rank stability bars, Pareto badges
+- **Delivery recommendations** (new!) — donor format, delivery method, viability tips
+- **Feasibility breakdown** — all nuclease-editor combinations tested
+
+**What to say about delivery:**
+> "New in v3.1 — every ranked strategy gets delivery annotations. For this iPSC case, it recommends ssODN for the base editing strategy, warns about p53 toxicity if dsDNA were used, and suggests ROCK inhibitor and p53DD co-delivery for viability. These come from a survey of 87 verified references."
+
+### For sickle cell / HSC demo
+- Gene: **HBB**, Chromosome: **11**, Position: **5227002**, Ref: **T**, Alt: **A**
+- Cell type: **CD34_HSC**
+- Shows HSC-specific delivery guidance (pre-stimulation, HiFi Cas9, minimize culture)
+
+See `APP_DEMO_WALKTHROUGH.md` for the full step-by-step webapp guide.
+
+---
+
 ## Tips
 
 - **Don't apologize for the terminal interface.** The CLI is a feature, not a limitation. It shows the tool is a real computational pipeline, not a pretty GUI wrapper.
+- **The webapp and CLI use the same pipeline.** Results are identical — the webapp just adds visualization.
 - **If something fails** (Ensembl timeout, etc.): "The Ensembl API can be slow sometimes. Let me show you the pre-computed results instead." Then Alt+Tab to the figures.
 - **If someone asks about a gene and it doesn't work:** It might be because Ensembl's gene symbol doesn't match. Try the HGNC symbol. Common issues: GBA (renamed to GBA1 in Ensembl).
+- **Show the delivery section in the webapp.** It's the newest feature and demonstrates practical lab guidance.

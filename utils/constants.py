@@ -615,3 +615,206 @@ EDITOR_NUCLEASE_EFFICIENCY = {
     ("BE4max", "SpRY"): 0.5,
     ("BE4max", "enFnCas9"): 0.8,
 }
+
+
+# =============================================================================
+# DELIVERY METHOD PARAMETERS
+# =============================================================================
+# Evidence-based delivery constraints and recommendations.
+#
+# These parameters encode hard feasibility filters and ordinal complexity
+# scores for delivery method selection. They are NOT used in TOPSIS scoring
+# (delivery is a post-ranking annotation, not a scoring dimension).
+#
+# Evidence provenance tags follow project convention:
+#   [MEASURED]  From published data with citation
+#   [DERIVED]   Computed from published data
+#   [ASSUMED]   Best-estimate, needs validation
+
+# --- Cargo size limits (hard constraints) ---
+# [MEASURED] Wu et al., Mol Ther, 2010 (PMID 19904234): AAV never exceeds 5.2 kb
+DELIVERY_AAV_MAX_PAYLOAD_NT = 4700
+# [DERIVED] From AAV payload minus 2 × typical homology arm length (600 bp each)
+DELIVERY_AAV_MAX_INSERT_WITH_HA_NT = 3500
+# [MEASURED] Standard synthesis limit for ssODN (Ultramer max ~300 nt)
+DELIVERY_SSODN_MAX_NT = 200
+# [MEASURED] Guide-it system (Takara Bio) practical limit
+DELIVERY_LSSDNA_MAX_NT = 5000
+# [MEASURED] Iyer et al., CRISPR J, 2022 (PMID 36070530): phagemid system
+DELIVERY_CSSDNA_PHAGEMID_MAX_NT = 10000
+# [MEASURED] Xie et al., Nat Biotechnol, 2024 (PMID 39663372): GATALYST system
+DELIVERY_CSSDNA_GATALYST_MAX_NT = 20000
+# [DERIVED] Phagemid backbone overhead makes very short cssDNA impractical
+DELIVERY_CSSDNA_MIN_PRACTICAL_NT = 1500
+
+# --- Donor format properties ---
+# Each donor format has properties relevant to delivery feasibility.
+# "toxicity" values are ordinal (1=lowest, 5=highest) for ranking, NOT
+# quantitative predictions.
+#
+# References:
+#   ssODN: Richardson et al., Nat Biotechnol, 2016 (PMID 26789497)
+#   cssDNA: Iyer 2022, Xie 2024, Letort et al., Nat Commun, 2025 (PMID 41257973)
+#   lssDNA: Quadros et al., Genome Biol, 2017 (Easi-CRISPR)
+#   dsDNA toxicity in iPSCs: Ihry et al., Nat Med, 2018 (PMID 29892062);
+#       Haapaniemi et al., Nat Med, 2018 (PMID 29892067)
+#   AAV6: Dever et al., Nature, 2016 (PMID 27820943)
+
+DONOR_FORMAT_PROPERTIES = {
+    "ssODN": {
+        "max_size_nt": 200,
+        "min_size_nt": 0,
+        "topology": "linear",
+        "strandedness": "single",
+        "repair_pathway": "SSTR",       # RAD51-independent (Paix 2017)
+        "random_integration_risk": 1,    # Very low
+        "toxicity_iPSC": 1,              # Very low
+        "toxicity_CD34_HSC": 1,
+        "toxicity_HEK293T": 1,
+        "production_difficulty": 1,      # Commercial synthesis
+    },
+    "cssDNA": {
+        "max_size_nt": 20000,            # GATALYST
+        "min_size_nt": 1500,             # Phagemid overhead
+        "topology": "circular",
+        "strandedness": "single",
+        "repair_pathway": "SDSA",
+        "random_integration_risk": 1,    # Very low (no free ends)
+        "toxicity_iPSC": 1,              # Very low; >80% viability (Xie 2024)
+        "toxicity_CD34_HSC": 1,
+        "toxicity_HEK293T": 1,
+        "production_difficulty": 3,      # Phagemid system
+    },
+    "lssDNA": {
+        "max_size_nt": 5000,
+        "min_size_nt": 200,
+        "topology": "linear",
+        "strandedness": "single",
+        "repair_pathway": "SDSA",
+        "random_integration_risk": 2,    # Low
+        "toxicity_iPSC": 2,              # Low
+        "toxicity_CD34_HSC": 2,
+        "toxicity_HEK293T": 1,
+        "production_difficulty": 3,
+    },
+    "dsDNA": {
+        "max_size_nt": 50000,
+        "min_size_nt": 0,
+        "topology": "linear",
+        "strandedness": "double",
+        "repair_pathway": "HR/DSBR",
+        "random_integration_risk": 4,    # High (Tanaka 2022)
+        "toxicity_iPSC": 5,              # Very high — p53 + cGAS-STING
+        "toxicity_CD34_HSC": 3,
+        "toxicity_HEK293T": 2,
+        "production_difficulty": 1,
+    },
+    "AAV6": {
+        "max_size_nt": 4700,
+        "min_size_nt": 0,
+        "topology": "linear_encapsidated",
+        "strandedness": "single",
+        "repair_pathway": "HR/SDSA",
+        "random_integration_risk": 2,    # Low-moderate (ITR integration)
+        "toxicity_iPSC": 2,
+        "toxicity_CD34_HSC": 2,
+        "toxicity_HEK293T": 1,
+        "production_difficulty": 5,      # Viral production required
+    },
+}
+
+# --- Delivery method × cell type feasibility ---
+# Values: "standard" (well-established), "moderate" (works but suboptimal),
+#         "poor" (<10% efficiency), "infeasible" (<5% or not demonstrated)
+# [MEASURED] from multiple sources — see DELIVERY_METHODS_COMPREHENSIVE_LITERATURE_REVIEW.md
+
+DELIVERY_CELL_COMPATIBILITY = {
+    "nucleofection_RNP": {
+        "iPSC": "standard",              # Lonza 4D CA-137 (Martin 2019)
+        "CD34_HSC": "standard",          # Lonza 4D DS-150 (Lattanzi 2019)
+        "HEK293T": "standard",
+        "T_cell": "standard",
+    },
+    "nucleofection_mRNA": {
+        "iPSC": "standard",
+        "CD34_HSC": "standard",          # Newby 2021 (ABE8e mRNA)
+        "HEK293T": "standard",
+        "T_cell": "standard",
+    },
+    "lipofection_RNP": {
+        "iPSC": "moderate",              # 45-60% NHEJ (Liang 2015)
+        "CD34_HSC": "infeasible",        # <5% (Lattanzi 2019)
+        "HEK293T": "standard",           # 80-94% (Zuris 2015)
+        "T_cell": "infeasible",
+    },
+    "AAV6_donor": {
+        "iPSC": "standard",              # 94% mono-allelic (Martin 2019)
+        "CD34_HSC": "standard",          # Gold standard (Dever 2016)
+        "HEK293T": "standard",
+        "T_cell": "standard",
+    },
+    "LNP_mRNA": {
+        "iPSC": "poor",                  # Not standard for ex vivo
+        "CD34_HSC": "poor",
+        "HEK293T": "poor",
+        "T_cell": "poor",
+        "liver_in_vivo": "standard",     # NTLA-2001 (Gillmore 2021)
+    },
+    "eVLP_RNP": {
+        "iPSC": "moderate",              # Emerging (NanoScribes, Mangeot 2025)
+        "CD34_HSC": "moderate",          # Nanoblades (Mangeot 2019)
+        "HEK293T": "standard",
+        "liver_in_vivo": "standard",     # Banskota 2022; 63% editing
+    },
+}
+
+# --- Modality delivery complexity scores ---
+# Ordinal 1-5 (lower = simpler). Used for post-ranking annotation only.
+# [DERIVED] from component count and protocol maturity
+
+MODALITY_DELIVERY_COMPLEXITY = {
+    "ABE": 1,        # 2 components (editor mRNA/RNP + sgRNA), no donor
+    "CBE": 1,        # Same as ABE
+    "PE": 3,         # Large mRNA (~6.3 kb) + epegRNA ± nicking guide
+    "PE3": 3,        # PE + nicking guide (3 components)
+    "PE4": 4,        # PE3 + MLH1dn (4 components)
+    "HDR_ssODN": 2,  # RNP + sgRNA + ssODN (simple co-electroporation)
+    "HDR_cssDNA": 2, # RNP + sgRNA + cssDNA (well-tolerated)
+    "HDR_lssDNA": 2, # RNP + sgRNA + lssDNA
+    "HDR_dsDNA": 3,  # RNP + sgRNA + dsDNA (toxicity concern in iPSCs)
+    "HDR_AAV6": 4,   # RNP electroporation + AAV6 transduction (two-step)
+}
+
+# --- Cell-type-specific warnings ---
+# Hard constraints that should trigger warnings or rejections
+
+CELL_TYPE_DELIVERY_WARNINGS = {
+    "iPSC": {
+        "dsDNA_warning": (
+            "dsDNA donors trigger p53-mediated apoptosis in iPSCs, "
+            "reducing viability to ~10% (Ihry 2018, Haapaniemi 2018). "
+            "Consider cssDNA or ssODN instead."
+        ),
+        "dsb_warning": (
+            "DSBs in iPSCs activate p53 pathway and may select for "
+            "TP53-mutant clones. DSB-free editors (BE/PE) preferred."
+        ),
+        "viability_enhancers": [
+            "ROCK inhibitor (Y-27632) during replating",
+            "BCL-XL overexpression for HDR (Li 2018, 20-100x improvement)",
+            "p53DD co-delivery for PE/CBE (Li 2022)",
+            "Cold shock 32C for 48h (Guo 2018, 2-10x HDR boost)",
+        ],
+    },
+    "CD34_HSC": {
+        "culture_warning": (
+            "Minimize ex vivo culture to preserve stemness and engraftment. "
+            "HDR requires S/G2 phase but activation causes stemness loss."
+        ),
+        "aav6_warning": (
+            "AAV6 donors may cause concatemeric insertions (>50% of cells; "
+            "Suchy 2025) and senescence response. Consider cssDNA alternative "
+            "(Letort 2025: 5x better engraftment vs AAV6)."
+        ),
+    },
+}

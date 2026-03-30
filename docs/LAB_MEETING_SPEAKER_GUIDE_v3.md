@@ -3,7 +3,7 @@
 **Presenter:** Vishal Bharti
 **Audience:** Debojyoti Chakraborty Lab, CSIR-IGIB
 **Duration:** ~40-50 minutes + 15-20 minutes Q&A
-**Presentation file:** `paper/CRISPRArchitect_v3_LabMeeting.pptx` (26 slides)
+**Presentation file:** `paper/CRISPRArchitect_v3_LabMeeting.pptx` (28 slides, includes SDSA sensitivity + delivery advisor slides)
 
 ---
 
@@ -258,7 +258,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 ### Slide 23: Codebase Summary
 
 **What to say (keep brief):**
-> "Quick technical summary: 190 tests passing, version 3.0.0, about 36,500 lines of Python. All 20 manuscript references verified with PMIDs. Docker-ready for deployment. MIT license, available on GitHub."
+> "Quick technical summary: 224 tests passing, version 3.0.0, about 36,500 lines of Python. All 20 manuscript references verified with PMIDs. Docker-ready for deployment. MIT license, available on GitHub."
 
 ---
 
@@ -273,7 +273,29 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 25: What's Next
+### Slide 25: SDSA Sensitivity Analysis
+
+**What to say:**
+> "Our SDSA displacement probability p=0.002 is an assumed parameter -- one of our most important assumptions. So we tested its robustness by running the full pipeline across a 5-fold range from p=0.001 to p=0.005, corresponding to mean tract lengths from 1000 bp down to 200 bp."
+>
+> "The key finding: strategy rankings are robust across this entire range. The relative ordering of cssDNA vs lssDNA vs dsDNA donors is preserved, and the predicted cssDNA/lssDNA ratio stays within published experimental ranges at all tested values. This means even if our assumed p is off by a factor of 2, our recommendations don't change."
+
+**Figure:** `Fig_SDSA_Sensitivity.png` -- shows p=0.002 robustness across the 0.001-0.005 range.
+
+---
+
+### Slide 26: Delivery Advisor
+
+**What to say:**
+> "We also added a delivery advisory module that provides practical guidance after TOPSIS ranking. This does not change the rankings -- delivery complexity is already captured by our Safety and Complexity dimensions. Instead, it adds annotations: donor format recommendations by edit size, cell-type warnings like iPSC dsDNA p53 toxicity, and viability enhancer suggestions."
+>
+> "The module is backed by a comprehensive literature review of 87 verified references covering cssDNA, lssDNA, dsDNA, and AAV donor formats. Key finding: cssDNA achieves 3-5x higher HDR rates than lssDNA -- supported by Iyer 2022, Xie 2024, and Letort 2025."
+
+**If asked why delivery is not a TOPSIS dimension:** "Delivery complexity is correlated with Safety and Complexity -- adding it would be redundant in about 90% of cases. And ordinal delivery scores lack calibration data for principled weight assignment."
+
+---
+
+### Slide 27: What's Next
 
 **What to say:**
 > "On the left: what I need from the lab. Even 2-3 iPSC editing cases with outcomes would transform the manuscript. The enFnCas9 cut-site stagger measurement would replace our biggest assumption with actual data. I've prepared data collection sheets."
@@ -282,7 +304,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 26: Thank You
+### Slide 28: Thank You
 
 **What to say:**
 > "The key takeaway: CRISPRArchitect v3 provides transparent, method-robust, uncertainty-quantified strategy recommendations. Every parameter is traceable to published evidence. Every limitation is honestly documented. Thank you."
@@ -418,6 +440,14 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 > We have three responses: (1) We are actively seeking experimental data from our lab; (2) We have expanded our computational benchmark to 33 published cases with documented experimental outcomes; (3) We position the tool as decision-support, not a predictive optimizer — the recommendations are starting points for experimental design, not substitutes for it. If the reviewer insists on wet-lab data, we may need to add it as a revision, which is why getting lab data before submission is our top priority.
 
+**Q26: "How do you handle delivery method recommendations?"**
+
+> We use an Option B architecture: delivery does not change TOPSIS rankings, but adds practical guidance as post-ranking annotations. The delivery advisor module has two tiers. First, hard feasibility filters that flag biologically incompatible combinations — for example, dsDNA donors in iPSCs trigger p53-mediated toxicity (Ihry 2018, Haapaniemi 2018). Second, practical recommendations: donor format selection by edit size, cell-type-specific warnings, and viability enhancer suggestions. The module is backed by 87 verified references from a comprehensive delivery methods literature review. Key finding from the literature: cssDNA achieves 3-5x higher HDR rates than lssDNA (Iyer 2022, Xie 2024, Letort 2025).
+
+**Q27: "Why didn't you add delivery as a TOPSIS dimension?"**
+
+> Three reasons. First, delivery complexity is correlated with existing Safety and Complexity dimensions — DSB-free modalities (BE, PE) inherently avoid delivery-related toxicity, and multi-round strategies inherently require more complex delivery logistics. Adding delivery would be redundant in approximately 90% of cases. Second, ordinal delivery complexity scores (e.g., "simple," "moderate," "complex") lack the calibration data needed for principled weight assignment in TOPSIS — we would need experimental outcome data linking delivery complexity to editing success rates. Third, delivery decisions are often made downstream of strategy selection (once you know the modality, you choose the delivery vehicle), so they fit naturally as post-ranking annotations rather than ranking inputs.
+
 ---
 
 ## Key Phrases to Remember
@@ -440,7 +470,8 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 | 8-12 | v3 new capabilities & BE rescue | 10 min |
 | 13-17 | Scoring methodology (TOPSIS/Pareto/sensitivity) | 10 min |
 | 18-21 | Scientific rigor (stats, scope, citations, params) | 8 min |
-| 22-26 | Results, codebase, limitations, future | 7 min |
+| 22-24 | Results, codebase, limitations | 5 min |
+| 25-28 | SDSA sensitivity, delivery advisor, future, thank you | 7 min |
 | Q&A | | 15-20 min |
 
 **Total: ~45 min talk + ~20 min Q&A = ~65 min**
@@ -499,5 +530,5 @@ This section prepares you for questions about the 10-case literature benchmark r
 
 ---
 
-*Document updated: March 2026*
+*Document updated: 2026-03-31*
 *CRISPRArchitect version: v3.0.0*

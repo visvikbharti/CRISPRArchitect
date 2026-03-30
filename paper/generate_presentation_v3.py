@@ -52,7 +52,7 @@ BLUE_ACC   = RGBColor(0x34, 0x98, 0xDB)
 # Slide dimensions (16:9)
 SLIDE_W = Inches(13.333)
 SLIDE_H = Inches(7.5)
-TOTAL_SLIDES = 26
+TOTAL_SLIDES = 28
 
 
 # ===========================================================================
@@ -1092,7 +1092,94 @@ add_bullet_list(slide, Inches(0.7), Inches(1.5), Inches(11.5), Inches(5.5), [
 add_slide_number(slide, 24)
 
 
-# ---- SLIDE 25: What's Next ------------------------------------------------
+# ---- SLIDE 25: SDSA Parameter Sensitivity Analysis -------------------------
+slide = prs.slides.add_slide(blank_layout)
+set_slide_bg(slide)
+add_title_bar(slide, "SDSA Parameter Robustness",
+              "Is p=0.002 [ASSUMED] a problem? No.")
+
+# Insert the sensitivity analysis figure
+_sdsa_fig = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                         "figures", "v3", "Fig_SDSA_Sensitivity.png")
+if os.path.exists(_sdsa_fig):
+    slide.shapes.add_picture(_sdsa_fig, Inches(0.4), Inches(1.3),
+                             Inches(8.5), Inches(5.5))
+else:
+    add_textbox(slide, Inches(0.5), Inches(3.0), Inches(8.0), Inches(1.0),
+                "[Figure: Fig_SDSA_Sensitivity.png not found]",
+                font_size=18, color=RED_ACCENT)
+
+# Key findings card on the right
+add_card(slide, Inches(9.2), Inches(1.3), Inches(3.8), Inches(5.5))
+add_textbox(slide, Inches(9.4), Inches(1.4), Inches(3.4), Inches(0.4),
+            "Key Findings", font_size=16, color=GOLD, bold=True)
+add_bullet_list(slide, Inches(9.4), Inches(2.0), Inches(3.4), Inches(4.5), [
+    ("Swept p from 0.001 to 0.005 (10-fold range)", WHITE, False),
+    ("10,000 simulations per p value", WHITE, False),
+    ("Mean tract: 200-2,358 bp across range", WHITE, False),
+    ("HDR rate: 1.7%-3.5% (always feasible)", WHITE, False),
+    ("cssDNA advantage maintained at ALL p values", TEAL, True),
+    ("Strategy rankings ROBUST to p variation", GREEN_ACC, True),
+    ("p=0.002 is [ASSUMED] but not a vulnerability", WHITE, False),
+], font_size=12, line_spacing=1.6, bullet_color=TEAL)
+
+add_slide_number(slide, 25)
+
+
+# ---- SLIDE 26: Delivery-Aware Recommendations -------------------------------
+slide = prs.slides.add_slide(blank_layout)
+set_slide_bg(slide)
+add_title_bar(slide, "Delivery-Aware Recommendations",
+              "New: Post-ranking delivery feasibility annotations (87 refs)")
+
+# Left card: Hard Constraints
+add_card(slide, Inches(0.5), Inches(1.4), Inches(4.0), Inches(5.3))
+add_textbox(slide, Inches(0.7), Inches(1.5), Inches(3.6), Inches(0.4),
+            "Tier 1: Hard Constraints", font_size=16, color=CORAL, bold=True)
+add_bullet_list(slide, Inches(0.7), Inches(2.1), Inches(3.6), Inches(4.2), [
+    ("AAV6 payload limit: 4.7 kb", WHITE, False),
+    ("dsDNA in iPSCs: p53 apoptosis", RED_ACCENT, True),
+    ("HDR needs S/G2 (quiescent HSCs)", WHITE, False),
+    ("Lipofection <5% in CD34+ HSCs", WHITE, False),
+    ("VLPs cannot carry donor DNA", WHITE, False),
+], font_size=13, line_spacing=1.5, bullet_color=CORAL)
+
+# Middle card: Donor Format
+add_card(slide, Inches(4.7), Inches(1.4), Inches(4.0), Inches(5.3))
+add_textbox(slide, Inches(4.9), Inches(1.5), Inches(3.6), Inches(0.4),
+            "Tier 2: Donor Format Guide", font_size=16, color=TEAL, bold=True)
+add_bullet_list(slide, Inches(4.9), Inches(2.1), Inches(3.6), Inches(4.2), [
+    ("SNP (<50 bp): ssODN", WHITE, False),
+    ("50 bp-2 kb: cssDNA preferred", TEAL, True),
+    ("2-5 kb: cssDNA or AAV6 (HSCs)", WHITE, False),
+    ("5-20 kb: cssDNA (GATALYST)", WHITE, False),
+    ("cssDNA 3-5x > lssDNA (3 studies)", GREEN_ACC, True),
+    ("cssDNA 5x better engraftment vs AAV6", GREEN_ACC, True),
+], font_size=13, line_spacing=1.5, bullet_color=TEAL)
+
+# Right card: Cell-Type Specific
+add_card(slide, Inches(8.9), Inches(1.4), Inches(4.0), Inches(5.3))
+add_textbox(slide, Inches(9.1), Inches(1.5), Inches(3.6), Inches(0.4),
+            "Cell-Type Guidance", font_size=16, color=GOLD, bold=True)
+add_bullet_list(slide, Inches(9.1), Inches(2.1), Inches(3.6), Inches(4.2), [
+    ("iPSC: Avoid dsDNA; use ROCK-i", WHITE, False),
+    ("iPSC: BCL-XL for HDR (20-100x)", WHITE, False),
+    ("iPSC: p53DD for PE/CBE", WHITE, False),
+    ("HSC: Pre-stim 48h SCF/TPO/FLT3L", WHITE, False),
+    ("HSC: HiFi Cas9 for off-target", WHITE, False),
+    ("HSC: Minimize culture (stemness)", WHITE, False),
+], font_size=13, line_spacing=1.5, bullet_color=GOLD)
+
+# Bottom annotation
+add_textbox(slide, Inches(0.5), Inches(6.8), Inches(12.3), Inches(0.4),
+            "Evidence: 87 verified refs | Iyer 2022, Xie 2024, Letort 2025, "
+            "Ihry 2018, Dever 2016, Frangoul 2021 | Does NOT change TOPSIS rankings",
+            font_size=11, color=DARK_GRAY)
+
+add_slide_number(slide, 26)
+
+
+# ---- SLIDE 27: What's Next ------------------------------------------------
 slide = prs.slides.add_slide(blank_layout)
 set_slide_bg(slide)
 add_title_bar(slide, "What's Next",
@@ -1112,18 +1199,18 @@ add_card(slide, Inches(6.8), Inches(1.5), Inches(5.8), Inches(5.0))
 add_textbox(slide, Inches(7.0), Inches(1.6), Inches(5.4), Inches(0.4),
             "Computational (in progress)", font_size=16, color=TEAL, bold=True)
 add_bullet_list(slide, Inches(7.0), Inches(2.2), Inches(5.4), Inches(3.5), [
+    ("SDSA sensitivity analysis — DONE", GREEN_ACC, True),
+    ("Delivery-aware recommendations — DONE (87 refs)", GREEN_ACC, True),
     "Expand benchmark to 30+ published cases",
     "Validate BE against Song et al. 2020 data",
-    "Validate PE against Chen et al. 2021 data",
     "Rebuild manuscript for PLOS Comp Bio",
-    "Generate publication-quality figures",
     "Independent expert labeling of cases",
 ], font_size=14, line_spacing=1.5, bullet_color=TEAL)
 
-add_slide_number(slide, 25)
+add_slide_number(slide, 27)
 
 
-# ---- SLIDE 26: Thank You --------------------------------------------------
+# ---- SLIDE 28: Thank You --------------------------------------------------
 slide = prs.slides.add_slide(blank_layout)
 set_slide_bg(slide, BG_DARKER)
 add_accent_line(slide, Inches(0), Inches(0), SLIDE_W, TEAL, Inches(0.06))
@@ -1148,7 +1235,7 @@ add_textbox(slide, Inches(1.0), Inches(5.5), Inches(11.3), Inches(1.0),
             "with every parameter traceable to published evidence.",
             font_size=16, color=LIGHT_GRAY, alignment=PP_ALIGN.CENTER)
 
-add_slide_number(slide, 26)
+add_slide_number(slide, 28)
 
 
 # ===========================================================================

@@ -368,6 +368,7 @@ Below is every file in the project. Files **new in v3** are marked with `[v3]`. 
 | `core/feasibility/prime_editing.py` | Prime editing feasibility engine |
 | `core/feasibility/hdr_design.py` | HDR feasibility engine with donor type recommendation |
 | `core/feasibility/off_target.py` | [v3] CFD and MIT off-target specificity scoring |
+| `core/feasibility/delivery_advisor.py` | [v3.1] Delivery-aware post-ranking annotations (Option B architecture) |
 | `core/mosaic/__init__.py` | Package initializer for the strategy layer |
 | `core/mosaic/generator.py` | Strategy generator with modality priors and evidence-based rationale |
 | `core/mosaic/annotation_integration.py` | Consequence penalties (ACMG-based) |
@@ -471,6 +472,7 @@ Below is every file in the project. Files **new in v3** are marked with `[v3]`. 
 | `tests/test_multi_nuclease.py` | [v3] Multi-nuclease engine tests |
 | `tests/test_off_target.py` | [v3] Off-target scoring tests |
 | `tests/test_topsis_scorer.py` | [v3] TOPSIS, Pareto, VIKOR, WPM tests |
+| `tests/test_delivery_advisor.py` | [v3.1] Delivery advisor tests (34 tests) |
 
 ### webapp/ -- Streamlit Interface
 
@@ -595,9 +597,13 @@ Identifies non-dominated strategies across all 6 dimensions. A strategy is Paret
 
 10,000 Dirichlet-sampled weight vectors (concentration=20, min_alpha=2.0, seed=42). For each vector, re-run TOPSIS and record ranks. Output per strategy: rank stability (fraction top-ranked), mean rank, full rank distribution. Standard errors computed as SE = sqrt(p*(1-p)/n) for the binomial proportion.
 
-### Stage 12: PipelineResult Returned
+### Stage 12: Delivery Advisory [v3.1]
 
-Assembles: transcript, variants, feasibility bundles, ranked strategies (with TOPSIS scores, Pareto flags, sensitivity results), rejected strategies, warnings, metadata.
+Post-ranking delivery feasibility annotations. After TOPSIS ranking is complete, the delivery advisor module applies two tiers of annotations: (1) hard feasibility filters that flag biologically incompatible strategy-cell type combinations (e.g., dsDNA donors in iPSCs due to p53-mediated toxicity), and (2) practical delivery recommendations including donor format by edit size, cell-type-specific warnings, and viability enhancers. This is implemented as Option B architecture: delivery complexity does NOT modify TOPSIS rankings (it is correlated with existing Safety and Complexity dimensions), but adds practical guidance as post-ranking annotations. See Section 7.11 for details. File: `core/feasibility/delivery_advisor.py`.
+
+### Stage 13: PipelineResult Returned
+
+Assembles: transcript, variants, feasibility bundles, ranked strategies (with TOPSIS scores, Pareto flags, sensitivity results, delivery annotations), rejected strategies, warnings, metadata.
 
 ---
 
@@ -886,6 +892,30 @@ Every parameter in CRISPRArchitect carries one of three evidence tags:
 | Splice region (3-8 bp) | -0.08 | **[ASSUMED]** | ACMG PM/PP; moderate risk |
 | Dual DSB + p53 | -0.10 | **[ASSUMED]** | Ihry et al. 2018 |
 | Total penalty cap | 0.30 | **[ASSUMED]** | Prevent consequence from dominating TOPSIS |
+
+### 7.11 Delivery-Aware Recommendations
+
+CRISPRArchitect v3.1 adds delivery-aware post-ranking annotations via the **Option B architecture**: hard feasibility filters combined with post-ranking annotations, rather than incorporating delivery as an additional TOPSIS dimension.
+
+**Rationale for Option B (not a TOPSIS dimension):** Delivery complexity is strongly correlated with existing TOPSIS dimensions -- particularly Safety (DSB-free modalities avoid p53-related delivery toxicity) and Complexity (multi-round strategies inherently require more complex delivery). Adding delivery as a 7th TOPSIS dimension would be redundant in approximately 90% of cases and would introduce ordinal complexity scores that lack the calibration data needed for principled weight assignment. Instead, delivery annotations are appended after ranking to provide practical guidance without distorting the TOPSIS scoring.
+
+**Two-tier architecture:**
+
+1. **Hard feasibility filters (binary):** Flag biologically incompatible strategy-cell type combinations. Examples: dsDNA donors in iPSCs trigger p53-mediated toxicity (Ihry et al., Nat Med, 2018; Haapaniemi et al., Nat Med, 2018); certain delivery vehicles are contraindicated for specific cell lineages.
+
+2. **Donor format and delivery method recommendations:** Practical guidance annotations including donor format selection by edit size, cell-type-specific warnings (e.g., iPSC electroporation viability windows), and viability enhancer suggestions.
+
+**Key findings from the delivery literature review (87 verified references in `DELIVERY_METHODS_COMPREHENSIVE_LITERATURE_REVIEW.md`):**
+
+- cssDNA donors achieve 3-5x higher HDR rates compared to lssDNA donors (Iyer et al., CRISPR J, 2022; Xie et al., 2024; Letort et al., 2025)
+- dsDNA donors in iPSCs carry significant p53-mediated toxicity risk (Ihry et al., Nat Med, 2018; Haapaniemi et al., Nat Med, 2018)
+- Donor format and delivery vehicle choice significantly impact editing outcomes but are downstream of strategy-level modality selection
+
+**File:** `core/feasibility/delivery_advisor.py` (34 tests in `tests/test_delivery_advisor.py`)
+
+### 7.12 SDSA Sensitivity Analysis
+
+The SDSA displacement probability p=0.002 was explored across the range p=0.001 to p=0.005 (corresponding to mean tract lengths of 1000 bp to 200 bp). The analysis confirms that p=0.002 produces robust relative rankings across the tested range: the rank ordering of strategies is stable, and the cssDNA/lssDNA donor ratio predictions remain within published experimental ranges at all tested p values. See `Fig_SDSA_Sensitivity.png` for the visualization of rank stability across the p parameter range.
 
 ---
 
@@ -1270,7 +1300,7 @@ python -m pytest tests/test_off_target.py -v
 python -m pytest tests/test_hgvs_parser.py -v
 ```
 
-Total test suite: ~200 tests covering v1 (30 ConversionSim) + v2 (93 pipeline) + v3 (new TOPSIS/multi-nuclease/off-target/HGVS tests).
+Total test suite: ~224 tests covering v1 (30 ConversionSim) + v2 (93 pipeline) + v3 (new TOPSIS/multi-nuclease/off-target/HGVS tests) + v3.1 (34 delivery advisor tests).
 
 ### 14.5 Running the Benchmark
 
@@ -1449,5 +1479,5 @@ All references have been web-search verified against PubMed as of 2026-03-30.
 ---
 
 *End of Complete Project Documentation -- CRISPRArchitect v3.0.0*
-*Document generated: 2026-03-30*
+*Document updated: 2026-03-31*
 *Total sections: 16 (including 2 appendices)*
