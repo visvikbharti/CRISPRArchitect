@@ -75,7 +75,7 @@ CRISPRArchitect tests a specific hypothesis:
 
 | Version | Date | Key Contribution |
 |---------|------|-----------------|
-| v1 | Jan 2026 | Foundation: ConversionSim, MOSAIC, TopoPred, ChromBridge, LoopSim (~24,000 LOC) |
+| v1 | Jan 2026 | Foundation: ConversionSim, MOSAIC, TopoPred, ChromBridge, LoopSim (~24,000 LOC). *Note: TopoPred, ChromBridge, and LoopSim were removed in v3.* |
 | v2 | Mar 2026 | Transcript-aware pipeline: sequence mapping, PAM-verified feasibility, consequence scoring, 30-case benchmark (~11,000 LOC added) |
 | v3 | Mar 2026 | Multi-nuclease engine, TOPSIS 6D scoring, Pareto front analysis, VIKOR/WPM comparison methods, sensitivity analysis, HGVS parser, off-target scoring, bystander triple-counting fix (~12,500 LOC total core) |
 
@@ -212,17 +212,17 @@ Simulates the HDR process step by step: end resection, RAD51 filament formation,
 
 Given gene structure, mutation positions, cell type, and nuclease choice, MOSAIC enumerates every feasible editing strategy and scores them on efficiency, safety, time, and cost. Benchmarked against 14 published papers with 71.4% top-3 concordance.
 
-#### TopoPred -- cssDNA Secondary Structure Analyzer
+#### TopoPred -- cssDNA Secondary Structure Analyzer (removed in v3)
 
-Analyzes circular single-stranded DNA donor templates for G-quadruplexes and hairpins that could interfere with HDR.
+Analyzes circular single-stranded DNA donor templates for G-quadruplexes and hairpins that could interfere with HDR. *This module was removed in v3 as part of the codebase streamlining.*
 
-#### ChromBridge -- 3D Chromatin Distance Predictor
+#### ChromBridge -- 3D Chromatin Distance Predictor (removed in v3)
 
-Calculates physical 3D distance between genomic loci using a Gaussian chain polymer model. Estimates translocation probability from 3D proximity using the empirical power law P(translocation) ~ s^(-1.08).
+Calculates physical 3D distance between genomic loci using a Gaussian chain polymer model. Estimates translocation probability from 3D proximity using the empirical power law P(translocation) ~ s^(-1.08). *This module was removed in v3 as part of the codebase streamlining.*
 
-#### LoopSim -- Cohesin Loop Extrusion Simulator
+#### LoopSim -- Cohesin Loop Extrusion Simulator (removed in v3)
 
-Simulates cohesin loop extrusion dynamics and their effect on spatial proximity between genomic loci.
+Simulates cohesin loop extrusion dynamics and their effect on spatial proximity between genomic loci. *This module was removed in v3 as part of the codebase streamlining.*
 
 #### WebApp -- Streamlit Interactive Interface
 
@@ -396,7 +396,7 @@ Below is every file in the project. Files **new in v3** are marked with `[v3]`. 
 | `mosaic/scorer.py` | Multi-axis strategy scorer (v1: efficiency, safety, time, cost) |
 | `mosaic/reporter.py` | Human-readable report generator |
 
-### topopred/ -- v1 cssDNA Structure Analyzer
+### topopred/ -- v1 cssDNA Structure Analyzer (removed in v3)
 
 | File | Description |
 |------|-------------|
@@ -406,7 +406,7 @@ Below is every file in the project. Files **new in v3** are marked with `[v3]`. 
 | `topopred/accessibility.py` | Per-nucleotide accessibility scorer |
 | `topopred/optimizer.py` | Donor sequence optimizer |
 
-### chrombridge/ -- v1 3D Chromatin Distance Predictor
+### chrombridge/ -- v1 3D Chromatin Distance Predictor (removed in v3)
 
 | File | Description |
 |------|-------------|
@@ -416,7 +416,7 @@ Below is every file in the project. Files **new in v3** are marked with `[v3]`. 
 | `chrombridge/tad_analysis.py` | TAD boundary analyzer |
 | `chrombridge/translocation.py` | Translocation risk estimator |
 
-### loopsim/ -- v1 Cohesin Loop Extrusion Simulator
+### loopsim/ -- v1 Cohesin Loop Extrusion Simulator (removed in v3)
 
 | File | Description |
 |------|-------------|

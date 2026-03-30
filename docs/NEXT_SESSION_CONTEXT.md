@@ -4,7 +4,7 @@
 **Version:** 3.0.0
 **Status:** Lab meeting ready (Wednesday). Manuscript rebuild pending.
 **Repository:** github.com/visvikbharti/CRISPRArchitect (branch: main, clean)
-**Tests:** 198 passing, 0 failures
+**Tests:** 190 passing, 0 failures
 
 ---
 
@@ -47,7 +47,7 @@ Biology.
 11. **Citation integrity audit**: Elliott 1998 tracts <58bp (not 200-2000bp), Kan 2017 journal corrected, HA 300nt unsupported by Iyer, Kim 2019→Song 2020
 12. **Literature benchmark**: 33 cases built (20 genes), 10 run through pipeline (30% top-1, 80% top-3)
 13. **6 figures generated**: All from real data, embedded in PPTX
-14. **25-slide presentation**: Dark theme, coral banners, embedded figures
+14. **26-slide presentation**: Dark theme, coral banners, embedded figures
 15. **Speaker guide**: 25 Q&A pairs, figure map, benchmark interpretation
 16. **Meeting prep**: Demo scripts, PI anticipation, contingency plans
 17. **Documentation**: 1,449-line comprehensive doc (16 sections, 61 evidence tags)
@@ -122,7 +122,7 @@ Biology.
 | Metric | Value |
 |--------|-------|
 | Version | 3.0.0 |
-| Tests | 200 pass, 0 fail |
+| Tests | 190 pass, 0 fail |
 | TOPSIS dimensions | 6 |
 | Nucleases | 5 |
 | Base editors | 9 (3 Tier A + 6 Tier B) |
@@ -146,7 +146,7 @@ I'm continuing work on CRISPRArchitect v3. Please read these files for context:
 2. crisprarchitect/docs/COMPLETE_PROJECT_DOCUMENTATION.md (full technical details)
 
 Key facts:
-- Version 3.0.0, 198 tests passing, all pushed to GitHub
+- Version 3.0.0, 190 tests passing, all pushed to GitHub
 - Lab meeting was on Wednesday — [DESCRIBE: how it went, PI feedback, data decisions]
 - 6D TOPSIS + Pareto + VIKOR/WPM scoring (bystander bug fixed)
 - 33-case literature benchmark, 10 run through pipeline

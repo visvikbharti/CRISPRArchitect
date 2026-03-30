@@ -4,18 +4,18 @@
 
 ### 1. Test the presentation
 - Open `paper/CRISPRArchitect_v3_LabMeeting.pptx` on the laptop you'll present from
-- Check that all 25 slides render correctly (fonts, colors, layout)
+- Check that all 26 slides render correctly (fonts, colors, layout)
 - If using lab projector: test the PPTX on the projector — dark backgrounds can look washed out on old projectors. If so, increase room darkness.
 
 ### 2. Have figures ready in a separate window
 Open these 6 PNG files in Preview/image viewer, ready to Alt+Tab:
 ```
-paper/figures/v3_results/Fig_StrategyDistribution_v2_v3.png    → for slide 11
-paper/figures/v3_results/Fig_BystanterFix.png                  → for slide 13
-paper/figures/v3_results/Fig_CrossMethod_Agreement.png          → for slide 16
-paper/figures/v3_results/Fig_ConversionSim_CIs.png             → for slide 17
-paper/figures/v3_results/Fig_ParameterProvenance.png            → for slide 20
-paper/figures/v3_results/Fig_LiteratureBenchmark.png            → for slide 21
+paper/figures/v3_results/Fig_StrategyDistribution_v2_v3.png    → for slide 12
+paper/figures/v3_results/Fig_BystanterFix.png                  → for slide 14
+paper/figures/v3_results/Fig_CrossMethod_Agreement.png          → for slide 17
+paper/figures/v3_results/Fig_ConversionSim_CIs.png             → for slide 18
+paper/figures/v3_results/Fig_ParameterProvenance.png            → for slide 21
+paper/figures/v3_results/Fig_LiteratureBenchmark.png            → for slide 22
 ```
 
 ### 3. Have a live demo ready (in case PI asks "show me")
@@ -38,11 +38,11 @@ Print `docs/LAB_MEETING_SPEAKER_GUIDE_v3.md` or keep it open on your phone/secon
 
 | Number | What It Means | When to Use It |
 |---|---|---|
-| **0 → 6 (out of 30)** | BE cases rescued by multi-nuclease engine | Slide 11, the headline result |
-| **86.7%** | Top-1 accuracy on ClinVar benchmark | Slide 21 |
+| **0 → 6 (out of 30)** | BE cases rescued by multi-nuclease engine | Slide 12, the headline result |
+| **86.7%** | Top-1 accuracy on ClinVar benchmark | Slide 22 |
 | **80%** | Top-3 concordance on literature benchmark | When discussing real-world validation |
 | **100%** | Cross-method concordance (TOPSIS = VIKOR = WPM) | When defending scoring methodology |
-| **198** | Tests passing, 0 failures | When discussing code quality |
+| **190** | Tests passing, 0 failures | When discussing code quality |
 
 ---
 
@@ -80,7 +80,7 @@ Prof. Chakraborty said "discuss objectives first." This means he wants to unders
 4. **Practical for the whole lab**: Anyone can use the Streamlit webapp or CLI.
 
 ### The "Wow" Moment in the Presentation
-Slide 11 (BE rescue) is your strongest moment. The visual of going from 0/30 to 6/30 base editing cases, with enFnCas9 as a primary driver, directly connects to the lab's identity. Pause here and say: **"This rescue is possible because of the broader PAM — because of enFnCas9, developed in this lab."**
+Slide 12 (BE rescue) is your strongest moment. The visual of going from 0/30 to 6/30 base editing cases, with enFnCas9 as a primary driver, directly connects to the lab's identity. Pause here and say: **"This rescue is possible because of the broader PAM — because of enFnCas9, developed in this lab."**
 
 ---
 

@@ -21,10 +21,10 @@
 
 ## Page 1: Home (show for 15 seconds)
 
-**What you see:** Title "CRISPRArchitect" with four module cards (MOSAIC, ConversionSim, ChromBridge, cssDNA-TopoPred).
+**What you see:** Title "CRISPRArchitect" with module cards (MOSAIC, ConversionSim, Strategy Analysis).
 
 **What to say:**
-> "This is the web interface. It has seven analysis pages accessible from the sidebar on the left. Let me walk through a real example — I'll use a real gene fetched from Ensembl."
+> "This is the web interface. It has analysis pages accessible from the sidebar on the left, including MOSAIC strategy optimization, ConversionSim Monte Carlo, and the new v3 Strategy Analysis page. Let me walk through a real example — I'll use a real gene fetched from Ensembl."
 
 **What to click:** Nothing. Move to the next page via the sidebar.
 
@@ -131,33 +131,19 @@
 
 ---
 
-## Page 5: ChromBridge 3D Distance (show if someone asks about spatial biology — 1 minute)
+## ~~Page 5: ChromBridge 3D Distance~~ (removed in v3)
 
-**What to click:** Sidebar → **"3D Distance & Risk (ChromBridge)"**
-
-**What you see:**
-1. **3D distance prediction** — physical distance between the two mutation sites in nanometers
-2. **Donor bridgeability** — can a 3 kb cssDNA bridge the gap? (answer: No, for distant exons)
-3. **Scale diagram** — visual showing donor size vs. inter-locus distance
-4. **Translocation risk assessment** — probability of deletion, inversion, translocation
-
-**What to say:**
-> "ChromBridge uses polymer physics to predict the 3D nuclear distance between the two sites. For exon 20 and exon 50 in NF1 — about 123 kilobases apart — the 3D distance is about 1,100 nanometers. A 3 kb cssDNA donor has a random coil diameter of only 260 nanometers. So a single template physically cannot bridge these two sites."
->
-> "This is the quantitative evidence for why single-template dual-site HDR doesn't work — the donor is literally too small. This was actually the founding question that started the entire CRISPRArchitect project."
+> **Note:** ChromBridge was removed in v3. The 3D chromatin distance modeling was part of the v1 architecture but is no longer included in the current tool. The polymer physics concepts informed the project's founding question but are not part of the active codebase.
 
 ---
 
-## Page 6: TopoPred Donor Quality (show briefly — 30 seconds)
+## ~~Page 6: TopoPred Donor Quality~~ (removed in v3)
 
-**What to click:** Sidebar → **"Donor Quality Check (TopoPred)"**
-
-**What to say:**
-> "This module analyzes the secondary structure of a cssDNA donor template. It scans for G-quadruplexes and hairpins that could block RAD51 filament formation. If a homology arm is more than 40% folded, the tool warns you and suggests synonymous codon substitutions to disrupt the structures."
+> **Note:** TopoPred was removed in v3. The cssDNA secondary structure analysis module was part of the v1 architecture but is no longer included in the current tool.
 
 ---
 
-## Page 7: v2 Variant Analysis (the v3 pipeline page — show if specifically asked)
+## Page 5: v3 Strategy Analysis (the v3 pipeline page — show if specifically asked)
 
 **What to click:** Sidebar → **"v2: Variant Analysis"**
 
@@ -198,9 +184,7 @@ Then strategy ranking cards showing the TOPSIS-scored strategies.
 | "How do I use it?" | Gene & Mutation Setup (2 min) |
 | "What strategies does it recommend?" | MOSAIC Strategy Optimizer (2 min) |
 | "How does the Monte Carlo work?" | ConversionSim (1 min) |
-| "What about 3D distance?" | ChromBridge (1 min) |
-| "What about donor design?" | TopoPred (30 sec) |
-| "Show me the v3 pipeline" | v2: Variant Analysis (1-2 min) |
+| "Show me the v3 pipeline" | v3 Strategy Analysis (1-2 min) |
 | "Can you run it on a specific gene?" | Gene & Mutation Setup → fetch from Ensembl |
 
 ---

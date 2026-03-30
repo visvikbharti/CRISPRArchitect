@@ -3,7 +3,7 @@
 **Presenter:** Vishal Bharti
 **Audience:** Debojyoti Chakraborty Lab, CSIR-IGIB
 **Duration:** ~40-50 minutes + 15-20 minutes Q&A
-**Presentation file:** `paper/CRISPRArchitect_v3_LabMeeting.pptx` (25 slides)
+**Presentation file:** `paper/CRISPRArchitect_v3_LabMeeting.pptx` (26 slides)
 
 ---
 
@@ -51,7 +51,15 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 4: v1 Foundation
+### Slide 4: Pipeline Overview
+
+> "This slide shows the complete 10-stage pipeline — from variant input through normalization, multi-nuclease PAM scanning, feasibility assessment across all three modalities, strategy generation, TOPSIS ranking, and robustness validation with Pareto analysis and Monte Carlo sensitivity."
+
+> "I'll walk through each of these stages in detail over the next several slides."
+
+---
+
+### Slide 5: v1 Foundation
 
 **What to say:**
 > "The project started with v1 — six simulation modules totaling about 24,000 lines of code. The most important is ConversionSim, which simulates HDR gene conversion tracts using Monte Carlo methods. MOSAIC handles multi-locus strategy optimization. ChromBridge predicts 3D chromatin distances. TopoPred analyzes cssDNA secondary structure. LoopSim simulates cohesin loop extrusion. And there's a Streamlit web app."
@@ -62,7 +70,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 5: v2 Recap
+### Slide 6: v2 Recap
 
 **What to say:**
 > "Version 2 added the transcript-aware pipeline — connecting to Ensembl, mapping variants to coding coordinates, checking reference alleles, annotating consequences. We benchmarked it on 30 ClinVar cases."
@@ -75,7 +83,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 6: v2 Key Finding — PAM-Window Bottleneck
+### Slide 7: v2 Key Finding — PAM-Window Bottleneck
 
 **What to say (this is a KEY moment):**
 > "This was the most important finding from v2. At all seven ClinVar loci with ABE-compatible transitions — meaning A-to-G or T-to-C mutations that should be perfect for adenine base editing — not a single SpCas9 guide placed the target base within the ABE editing window at positions 4-7."
@@ -86,7 +94,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 7: v3 What's New
+### Slide 8: v3 What's New
 
 **What to say:**
 > "This finding motivated version 3, which has three major new capabilities."
@@ -99,7 +107,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 8: Multi-Nuclease Engine
+### Slide 9: Multi-Nuclease Engine
 
 **What to say:**
 > "Here's the nuclease table. SpCas9 with NGG PAM is our baseline. enFnCas9 — developed in this lab — has the NRG PAM, which approximately doubles the number of targetable sites. SpCas9-NG has NG. SpRY is near-PAMless but has reduced activity. Cas12a has TTTV."
@@ -110,7 +118,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 9: enFnCas9 Advantage
+### Slide 10: enFnCas9 Advantage
 
 **What to say:**
 > "This slide separates what we know from what we assume about enFnCas9. The green box shows measured properties from the 2024 Nature Communications paper — NRG PAM recognition, single-nucleobase specificity, and improved HDR knock-in. The orange box shows what we're assuming — the 3 bp stagger, the 1.5x HDR multiplier, and the ABE8e-enFnCas9 editing window."
@@ -119,7 +127,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 10: How Multi-Nuclease Rescues Base Editing
+### Slide 11: How Multi-Nuclease Rescues Base Editing
 
 **What to say:**
 > "Here's the mechanism. On the left, v2 with SpCas9 only — NGG PAM covers about 8% of positions, and the ABE7.10 window is only 4 nucleotides wide. On the right, v3 adds enFnCas9 with NRG PAM and ABE8e with a window of positions 3-9 — nearly three times broader."
@@ -128,7 +136,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 11: KEY FINDING — BE Rescue (0/30 → 6/30)
+### Slide 12: KEY FINDING — BE Rescue (0/30 → 6/30)
 
 **What to say (second KEY moment):**
 > "This is the headline result of v3. Base editing went from zero top-ranked cases in v2 to six in v3. The strategy distribution is now 20% base editing, 77% prime editing, 3% HDR."
@@ -139,7 +147,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 12: 6D TOPSIS Scoring
+### Slide 13: 6D TOPSIS Scoring
 
 **What to say:**
 > "Our scoring system uses TOPSIS — Technique for Order Preference by Similarity to Ideal Solution. It's a well-established multi-criteria decision method from 1981."
@@ -152,7 +160,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 13: Bystander Triple-Counting Bug Fix
+### Slide 14: Bystander Triple-Counting Bug Fix
 
 **What to say (be direct and honest):**
 > "During the v3 overhaul, we discovered a critical scoring bug. In v2, bystander edit severity was being penalized through three independent channels: once in the risk dimension, once as a consequence penalty, and once through the loss of a 'clean design' bonus. The total penalty for just one bystander was 0.055 — but base editing's feasibility advantage over prime editing was only 0.033."
@@ -165,7 +173,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 14: Pareto Front Analysis
+### Slide 15: Pareto Front Analysis
 
 **What to say:**
 > "Beyond TOPSIS, we added Pareto analysis. A strategy is Pareto-non-dominated if no other strategy is better on ALL dimensions simultaneously. The Pareto front is the set of strategies that could be optimal under some weighting scheme."
@@ -176,7 +184,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 15: Monte Carlo Sensitivity Analysis
+### Slide 16: Monte Carlo Sensitivity Analysis
 
 **What to say:**
 > "Instead of reporting just a single 'best' strategy, we report rank stability. We generate 10,000 random weight vectors from a Dirichlet distribution centered on our defaults, run TOPSIS with each, and count how often each strategy is top-ranked."
@@ -187,7 +195,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 16: Cross-Method Validation
+### Slide 17: Cross-Method Validation
 
 **What to say:**
 > "To demonstrate that our rankings aren't an artifact of the TOPSIS method, we also implemented two alternative multi-criteria decision methods: VIKOR, which focuses on compromise solutions, and the Weighted Product Model, which is multiplicative rather than additive."
@@ -196,7 +204,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 17: Statistical Rigor in ConversionSim
+### Slide 18: Statistical Rigor in ConversionSim
 
 **What to say:**
 > "Every Monte Carlo output now includes uncertainty quantification. The HDR rate comes with a binomial 95% confidence interval. The mean tract length has a standard error and CI. Every distance-probability estimate has a Wilson score interval."
@@ -207,7 +215,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 18: ConversionSim Scope
+### Slide 19: ConversionSim Scope
 
 **What to say:**
 > "I want to be completely honest about what our simulation can and cannot do. ConversionSim models the SDSA pathway — synthesis-dependent strand annealing. This is valid for long-donor HDR with cssDNA, dsDNA, and lssDNA templates."
@@ -218,7 +226,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 19: Citation Integrity
+### Slide 20: Citation Integrity
 
 **What to say:**
 > "We performed a systematic verification of every reference and calibration value using web searches against PubMed and publisher databases. This was important because some of our original calibration data turned out to be incorrect."
@@ -231,7 +239,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 20: Parameter Provenance
+### Slide 21: Parameter Provenance
 
 **What to say:**
 > "Every constant in our code is tagged with one of three evidence levels. 'Measured' means the value comes directly from a published measurement — like SpCas9 cutting at position -3 from the PAM. 'Derived' means we computed it from published data — like the HDR rate from Iyer et al. 'Assumed' means it's a modeling choice with rationale but no direct measurement — like the enFnCas9 stagger."
@@ -240,21 +248,21 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 21: Benchmark Results v2 vs v3
+### Slide 22: Benchmark Results v2 vs v3
 
 **What to say:**
 > "Comparing v2 and v3 on the same 30 ClinVar cases: top-1 accuracy is the same at 86.7%. But the strategy distribution changed dramatically — from 97% PE in v2 to 77% PE plus 20% BE in v3. This is the direct result of the multi-nuclease engine and the bystander scoring fix."
 
 ---
 
-### Slide 22: Codebase Summary
+### Slide 23: Codebase Summary
 
 **What to say (keep brief):**
-> "Quick technical summary: 198 tests passing, version 3.0.0, about 36,500 lines of Python. All 20 manuscript references verified with PMIDs. Docker-ready for deployment. MIT license, available on GitHub."
+> "Quick technical summary: 190 tests passing, version 3.0.0, about 36,500 lines of Python. All 20 manuscript references verified with PMIDs. Docker-ready for deployment. MIT license, available on GitHub."
 
 ---
 
-### Slide 23: Limitations
+### Slide 24: Limitations
 
 **What to say (be thorough and honest):**
 > "Let me be upfront about what we haven't done yet. First and most importantly, we have no experimental validation — our benchmark uses self-curated truth labels, not experimental outcomes. This is the biggest gap for publication."
@@ -265,7 +273,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 24: What's Next
+### Slide 25: What's Next
 
 **What to say:**
 > "On the left: what I need from the lab. Even 2-3 iPSC editing cases with outcomes would transform the manuscript. The enFnCas9 cut-site stagger measurement would replace our biggest assumption with actual data. I've prepared data collection sheets."
@@ -274,7 +282,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 25: Thank You
+### Slide 26: Thank You
 
 **What to say:**
 > "The key takeaway: CRISPRArchitect v3 provides transparent, method-robust, uncertainty-quantified strategy recommendations. Every parameter is traceable to published evidence. Every limitation is honestly documented. Thank you."
@@ -301,7 +309,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 > ConversionSim models the SDSA pathway (resection → RAD51 filament → strand invasion → D-loop synthesis). ssODN editing primarily proceeds via SSTR — Single-Strand Template Repair — which is RAD51-independent and PCNA-dependent. These are fundamentally different mechanisms with very different tract lengths: SDSA produces hundreds of bp, SSTR produces ~10-50 bp. Using an SDSA model for ssODN predictions would be scientifically incorrect, so we explicitly restrict our claims. For ssODN, the empirical distance-decay from Paquet et al. (2016) — edit within 10 bp of cut — remains the best guide.
 
 **Q6: "What about chromatin context? Open vs closed chromatin affects editing."**
-> Currently not modeled. CRISPRArchitect evaluates sequence-level constraints (PAM, editing window, coding consequence) but does not incorporate chromatin accessibility (ATAC-seq), replication timing, or histone modifications. This is a documented limitation. The ChromBridge module in v1 models 3D chromatin distance using polymer physics, but this is for distance prediction, not accessibility. Integrating ATAC-seq data is a planned future direction.
+> Currently not modeled. CRISPRArchitect evaluates sequence-level constraints (PAM, editing window, coding consequence) but does not incorporate chromatin accessibility (ATAC-seq), replication timing, or histone modifications. This is a documented limitation. The ChromBridge module from v1 (which modeled 3D chromatin distance using polymer physics) has been removed from v3 — it addressed distance prediction, not accessibility. Integrating ATAC-seq data is a planned future direction.
 
 ---
 
@@ -372,7 +380,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 **Q17: "How is the code organized?"**
 
-> Three layers: (1) v1 simulation modules (~24,000 LOC) — ConversionSim, MOSAIC, ChromBridge, TopoPred, LoopSim. (2) v2/v3 core pipeline (~12,500 LOC) — transcript mapping, feasibility engines, strategy generation, TOPSIS scoring. (3) Infrastructure — Streamlit web app, CLI, Docker, CI/CD. The v3 core pipeline is the primary entry point; v1 modules are retained for simulation capabilities.
+> Three layers: (1) v1 simulation modules — ConversionSim and MOSAIC are retained for simulation capabilities; ChromBridge, TopoPred, and LoopSim have been removed from v3 as they are not required by the current pipeline. (2) v2/v3 core pipeline (~12,500 LOC) — transcript mapping, feasibility engines, strategy generation, TOPSIS scoring. (3) Infrastructure — Streamlit web app, CLI, Docker, CI/CD. The v3 core pipeline is the primary entry point.
 
 **Q18: "Can I run this on my laptop?"**
 
@@ -428,11 +436,11 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 | Slides | Section | Time |
 |--------|---------|------|
 | 1-3 | Introduction & Problem | 5 min |
-| 4-6 | v1/v2 foundation & key finding | 5 min |
-| 7-11 | v3 new capabilities & BE rescue | 10 min |
-| 12-16 | Scoring methodology (TOPSIS/Pareto/sensitivity) | 10 min |
-| 17-20 | Scientific rigor (stats, scope, citations, params) | 8 min |
-| 21-25 | Results, codebase, limitations, future | 7 min |
+| 4-7 | Pipeline overview, v1/v2 foundation & key finding | 5 min |
+| 8-12 | v3 new capabilities & BE rescue | 10 min |
+| 13-17 | Scoring methodology (TOPSIS/Pareto/sensitivity) | 10 min |
+| 18-21 | Scientific rigor (stats, scope, citations, params) | 8 min |
+| 22-26 | Results, codebase, limitations, future | 7 min |
 | Q&A | | 15-20 min |
 
 **Total: ~45 min talk + ~20 min Q&A = ~65 min**
@@ -445,12 +453,12 @@ All figures are in `paper/figures/v3_results/` and are generated from **real dat
 
 | Figure File | Use on Slide | What It Shows | Key Interpretation |
 |---|---|---|---|
-| `Fig_StrategyDistribution_v2_v3.png` | Slide 11 (BE Rescue) | Side-by-side bars: v2 (BE=0, PE=29) vs v3 (BE=6, PE=23) | Multi-nuclease engine rescued BE from 0% to 20%. PE still dominates (77%) but this reflects genuine biological constraints, not a bug. |
-| `Fig_LiteratureBenchmark.png` | Slide 21 (Results) | Literature benchmark: 30% top-1, 80% top-3 concordance | Top-1 appears low (30%) but discordance is explainable: HDR papers are pre-PE era. Top-3 at 80% shows published strategy is nearly always in our recommendation set. |
-| `Fig_BystanterFix.png` | Slide 13 (Bug Fix) | v2 scoring vs v3: BE score drops below PE with just 1 bystander in v2, but stays above PE with 3 bystanders in v3 | The triple-counting bug made PE unbeatable. After fix, BE properly wins when PAM+window are verified. |
-| `Fig_ConversionSim_CIs.png` | Slide 17 (Statistical Rigor) | Tract length distribution with mean/median + 95% CI; distance-probability curve with Wilson CIs | Every output now has uncertainty quantification. Mean tract 706 bp (SE=37), P(>=500bp) = 47.2% [42.0-52.4%]. |
-| `Fig_ParameterProvenance.png` | Slide 20 (Parameters) | Pie chart: 35% measured, 20% derived, 45% assumed | Transparent about what we know vs assume. All [ASSUMED] parameters explored in sensitivity analysis. |
-| `Fig_CrossMethod_Agreement.png` | Slide 16 (Cross-Method) | TOPSIS vs VIKOR vs WPM: all produce identical rankings | 100% concordance proves recommendation is method-robust, not an artifact of TOPSIS. |
+| `Fig_StrategyDistribution_v2_v3.png` | Slide 12 (BE Rescue) | Side-by-side bars: v2 (BE=0, PE=29) vs v3 (BE=6, PE=23) | Multi-nuclease engine rescued BE from 0% to 20%. PE still dominates (77%) but this reflects genuine biological constraints, not a bug. |
+| `Fig_LiteratureBenchmark.png` | Slide 22 (Results) | Literature benchmark: 30% top-1, 80% top-3 concordance | Top-1 appears low (30%) but discordance is explainable: HDR papers are pre-PE era. Top-3 at 80% shows published strategy is nearly always in our recommendation set. |
+| `Fig_BystanterFix.png` | Slide 14 (Bug Fix) | v2 scoring vs v3: BE score drops below PE with just 1 bystander in v2, but stays above PE with 3 bystanders in v3 | The triple-counting bug made PE unbeatable. After fix, BE properly wins when PAM+window are verified. |
+| `Fig_ConversionSim_CIs.png` | Slide 18 (Statistical Rigor) | Tract length distribution with mean/median + 95% CI; distance-probability curve with Wilson CIs | Every output now has uncertainty quantification. Mean tract 706 bp (SE=37), P(>=500bp) = 47.2% [42.0-52.4%]. |
+| `Fig_ParameterProvenance.png` | Slide 21 (Parameters) | Pie chart: 35% measured, 20% derived, 45% assumed | Transparent about what we know vs assume. All [ASSUMED] parameters explored in sensitivity analysis. |
+| `Fig_CrossMethod_Agreement.png` | Slide 17 (Cross-Method) | TOPSIS vs VIKOR vs WPM: all produce identical rankings | 100% concordance proves recommendation is method-robust, not an artifact of TOPSIS. |
 
 ### How to Print/Show Figures
 
