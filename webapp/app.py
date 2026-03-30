@@ -52,9 +52,7 @@ from crisprarchitect.mosaic.scorer import StrategyScorer, ScoredStrategy
 from crisprarchitect.mosaic.reporter import StrategyReporter
 
 from crisprarchitect.conversion_sim import ConversionSimulator
-from crisprarchitect.chrombridge import ChromatinDistancePredictor
-from crisprarchitect.chrombridge.translocation import TranslocationRiskPredictor
-from crisprarchitect.topopred import DonorAnalyzer
+# ChromBridge and TopoPred removed in v3 cleanup — will be re-added in webapp v3 update
 
 from crisprarchitect.utils.constants import (
     CELL_TYPE_PARAMS,
@@ -2045,8 +2043,8 @@ PAGE_FUNCTIONS = {
     "setup": page_setup,
     "mosaic": page_mosaic,
     "conversion": page_conversion,
-    "chrombridge": page_chrombridge,
-    "topopred": page_topopred,
+    # "chrombridge": page_chrombridge,  # Removed in v3 cleanup
+    # "topopred": page_topopred,        # Removed in v3 cleanup
     "report": page_report,
 }
 if _V2_PAGE_AVAILABLE:

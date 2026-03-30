@@ -16,9 +16,6 @@ core.mosaic      : Strategy generation with consequence-aware scoring
 Simulation Modules
 ------------------
 conversion_sim : Gene conversion tract simulator (Monte Carlo)
-chrombridge    : 3D chromatin distance & translocation risk predictor
-topopred       : cssDNA secondary structure analyzer
-loopsim        : Cohesin loop extrusion simulator
 
 Legacy Module
 -------------

@@ -98,7 +98,7 @@ Biology.
 - [ ] Independent expert labeling (3+ PIs, Cohen's kappa)
 - [ ] Integrate lab data when available
 - [ ] Write PLOS Comp Bio cover letter
-- [ ] Update README.md for v3
+- [x] Update README.md for v3 (done 2026-03-30)
 
 ### Strengthening
 - [ ] Validate BE against Song et al. 2020 (13,504 ABE targets)
@@ -122,10 +122,10 @@ Biology.
 | Metric | Value |
 |--------|-------|
 | Version | 3.0.0 |
-| Tests | 198 pass, 0 fail |
+| Tests | 200 pass, 0 fail |
 | TOPSIS dimensions | 6 |
 | Nucleases | 5 |
-| Base editors | 7 (+4 legacy) |
+| Base editors | 9 (3 Tier A + 6 Tier B) |
 | ClinVar benchmark | 30 cases, 86.7% top-1 |
 | Literature benchmark | 33 cases, 30% top-1, 80% top-3 |
 | v3 strategy distribution | PE=23, BE=6, HDR=1 |

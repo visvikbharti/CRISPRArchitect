@@ -117,7 +117,6 @@ def cmd_analyze_legacy(args):
     from crisprarchitect.mosaic.mutation_classifier import Mutation, MutationClassifier
     from crisprarchitect.mosaic.strategy_enumerator import StrategyEnumerator
     from crisprarchitect.mosaic.scorer import StrategyScorer
-    from crisprarchitect.chrombridge import ChromatinDistancePredictor
     from crisprarchitect.conversion_sim import ConversionSimulator
 
     print(f"[Legacy mode] Fetching {args.gene} from Ensembl...")
@@ -139,11 +138,6 @@ def cmd_analyze_legacy(args):
     dist = gene.genomic_distance(args.exon1, args.exon2)
     print(f"Genomic distance exon {args.exon1} to {args.exon2}: {dist:,} bp")
 
-    pred = ChromatinDistancePredictor()
-    d3d = pred.predict_3d_distance(abs(dist))
-    bridge = pred.can_donor_bridge(abs(dist), 3000, "circular_ssDNA")
-    print(f"3D distance: {d3d.mean_3d_distance_nm:.0f} nm")
-    print(f"3 kb cssDNA can bridge: {bridge.feasible}")
     print()
 
     sim = ConversionSimulator(
