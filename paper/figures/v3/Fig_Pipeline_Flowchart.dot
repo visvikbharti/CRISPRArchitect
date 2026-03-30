@@ -1,0 +1,302 @@
+
+digraph CRISPRArchitect_Pipeline {
+    // Global settings
+    graph [
+        rankdir=TB
+        bgcolor="#1B2838"
+        fontname="Helvetica"
+        fontsize=14
+        fontcolor="#FFFFFF"
+        pad="0.5"
+        nodesep=0.5
+        ranksep=0.6
+        dpi=200
+        size="10,18"
+        label=<
+            <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0">
+                <TR><TD><FONT FACE="Helvetica-Bold" POINT-SIZE="24" COLOR="#FFFFFF">CRISPRArchitect v3 Pipeline</FONT></TD></TR>
+                <TR><TD><FONT FACE="Helvetica" POINT-SIZE="14" COLOR="#1B9E77">End-to-End Genome Editing Strategy Design</FONT></TD></TR>
+            </TABLE>
+        >
+        labelloc=t
+        labeljust=c
+    ]
+
+    node [
+        fontname="Helvetica"
+        fontsize=11
+        style="filled,rounded"
+        shape=box
+        penwidth=1.5
+        margin="0.15,0.10"
+    ]
+
+    edge [
+        color="#1B9E77"
+        penwidth=1.5
+        arrowsize=0.8
+        fontname="Helvetica"
+        fontsize=9
+        fontcolor="#CCCCCC"
+    ]
+
+    // ── INPUT ──
+    input [
+        label=<
+            <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><FONT FACE="Helvetica-Bold" POINT-SIZE="13" COLOR="#1B2838">INPUT</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="10" COLOR="#1B2838">Genomic coordinates / HGVS / ClinVar batch</FONT></TD></TR>
+            </TABLE>
+        >
+        fillcolor="#FFC107"
+        color="#FFC107"
+        fontcolor="#1B2838"
+    ]
+
+    // ── STAGE 1: Variant Parsing ──
+    s1 [
+        label=<
+            <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><FONT FACE="Helvetica-Bold" POINT-SIZE="12" COLOR="#FFFFFF">1. Variant Parsing</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">HGVS parser · ClinVar TSV/VCF · coordinate input</FONT></TD></TR>
+            </TABLE>
+        >
+        fillcolor="#233448"
+        color="#1B9E77"
+    ]
+
+    // ── STAGE 2: Transcript Fetch ──
+    s2 [
+        label=<
+            <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><FONT FACE="Helvetica-Bold" POINT-SIZE="12" COLOR="#FFFFFF">2. Transcript Fetch</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">Ensembl REST API · GRCh38 · canonical transcript</FONT></TD></TR>
+            </TABLE>
+        >
+        fillcolor="#233448"
+        color="#1B9E77"
+    ]
+
+    // ── STAGE 3: Coordinate Mapping ──
+    s3 [
+        label=<
+            <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><FONT FACE="Helvetica-Bold" POINT-SIZE="12" COLOR="#FFFFFF">3. Coordinate Mapping</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">Genomic → CDS · exon/codon position · strand handling</FONT></TD></TR>
+            </TABLE>
+        >
+        fillcolor="#233448"
+        color="#1B9E77"
+    ]
+
+    // ── STAGE 4: Reference Validation + Annotation ──
+    s4 [
+        label=<
+            <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><FONT FACE="Helvetica-Bold" POINT-SIZE="12" COLOR="#FFFFFF">4. Validation &amp; Annotation</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">Reference allele check · consequence classification (ACMG)</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">Missense · nonsense · splice · synonymous</FONT></TD></TR>
+            </TABLE>
+        >
+        fillcolor="#233448"
+        color="#1B9E77"
+    ]
+
+    // ── STAGE 5: Variant Normalization ──
+    s5 [
+        label=<
+            <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><FONT FACE="Helvetica-Bold" POINT-SIZE="12" COLOR="#FFFFFF">5. Variant Normalization</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">NormalizedVariant object · local sequence ±200 bp</FONT></TD></TR>
+            </TABLE>
+        >
+        fillcolor="#233448"
+        color="#1B9E77"
+    ]
+
+    // ── STAGE 6: Multi-Nuclease PAM Scan ──
+    s6 [
+        label=<
+            <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><FONT FACE="Helvetica-Bold" POINT-SIZE="12" COLOR="#D95F02">6. Multi-Nuclease PAM Scan</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">5 nucleases: SpCas9 · enFnCas9 · SpCas9-NG · SpRY · Cas12a</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">GC filter · poly-T filter · composite guide scoring</FONT></TD></TR>
+            </TABLE>
+        >
+        fillcolor="#233448"
+        color="#D95F02"
+    ]
+
+    // ── STAGE 7: Feasibility Assessment (parallel branches) ──
+    subgraph cluster_feasibility {
+        graph [
+            label=<
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0">
+                    <TR><TD><FONT FACE="Helvetica-Bold" POINT-SIZE="13" COLOR="#D95F02">7. Multi-Modality Feasibility Assessment</FONT></TD></TR>
+                </TABLE>
+            >
+            style="rounded,dashed"
+            color="#D95F02"
+            bgcolor="#131C28"
+            fontcolor="#D95F02"
+            penwidth=1.5
+        ]
+
+        be [
+            label=<
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                    <TR><TD><FONT FACE="Helvetica-Bold" POINT-SIZE="11" COLOR="#1B9E77">Base Editing</FONT></TD></TR>
+                    <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">9 editor profiles (3 Tier A + 6 Tier B)</FONT></TD></TR>
+                    <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">ABE7.10 · ABE8e · BE4max + fusions</FONT></TD></TR>
+                    <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">Window check · bystander identification</FONT></TD></TR>
+                </TABLE>
+            >
+            fillcolor="#233448"
+            color="#1B9E77"
+        ]
+
+        pe [
+            label=<
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                    <TR><TD><FONT FACE="Helvetica-Bold" POINT-SIZE="11" COLOR="#D95F02">Prime Editing</FONT></TD></TR>
+                    <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">pegRNA design (PBS + RT template)</FONT></TD></TR>
+                    <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">PE3 nicking guide search</FONT></TD></TR>
+                </TABLE>
+            >
+            fillcolor="#233448"
+            color="#D95F02"
+        ]
+
+        hdr [
+            label=<
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                    <TR><TD><FONT FACE="Helvetica-Bold" POINT-SIZE="11" COLOR="#FFC107">HDR Design</FONT></TD></TR>
+                    <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">Donor type: dsDNA · lssDNA · cssDNA · AAV</FONT></TD></TR>
+                    <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">ConversionSim Monte Carlo (10K sims)</FONT></TD></TR>
+                    <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">Cut-to-edit distance · HA optimization</FONT></TD></TR>
+                </TABLE>
+            >
+            fillcolor="#233448"
+            color="#FFC107"
+        ]
+    }
+
+    // ── STAGE 8: Strategy Generation ──
+    s8 [
+        label=<
+            <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><FONT FACE="Helvetica-Bold" POINT-SIZE="12" COLOR="#FFFFFF">8. Strategy Generation</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">Single-step · dual · hybrid combinations</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">BE+PE · BE+HDR · PE+HDR · dual-BE · dual-PE</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">Rejected strategies tagged with reasons</FONT></TD></TR>
+            </TABLE>
+        >
+        fillcolor="#233448"
+        color="#1B9E77"
+    ]
+
+    // ── STAGE 9: TOPSIS Ranking ──
+    s9 [
+        label=<
+            <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><FONT FACE="Helvetica-Bold" POINT-SIZE="12" COLOR="#D95F02">9. TOPSIS 6D Multi-Criteria Ranking</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">Safety (0.28) · Feasibility (0.23) · Complexity (0.19)</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">Risk (0.14) · Confidence (0.09) · Consequence (0.07)</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">Hwang &amp; Yoon, 1981</FONT></TD></TR>
+            </TABLE>
+        >
+        fillcolor="#233448"
+        color="#D95F02"
+    ]
+
+    // ── STAGE 10: Pareto + Sensitivity ──
+    subgraph cluster_validation {
+        graph [
+            label=<
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="0">
+                    <TR><TD><FONT FACE="Helvetica-Bold" POINT-SIZE="13" COLOR="#1B9E77">10. Robustness Validation</FONT></TD></TR>
+                </TABLE>
+            >
+            style="rounded,dashed"
+            color="#1B9E77"
+            bgcolor="#131C28"
+            fontcolor="#1B9E77"
+            penwidth=1.5
+        ]
+
+        pareto [
+            label=<
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                    <TR><TD><FONT FACE="Helvetica-Bold" POINT-SIZE="11" COLOR="#1B9E77">Pareto Front</FONT></TD></TR>
+                    <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">Weight-independent</FONT></TD></TR>
+                    <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">dominance analysis</FONT></TD></TR>
+                </TABLE>
+            >
+            fillcolor="#233448"
+            color="#1B9E77"
+        ]
+
+        sensitivity [
+            label=<
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                    <TR><TD><FONT FACE="Helvetica-Bold" POINT-SIZE="11" COLOR="#D95F02">Monte Carlo Sensitivity</FONT></TD></TR>
+                    <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">10,000 Dirichlet weight</FONT></TD></TR>
+                    <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">permutations · rank stability</FONT></TD></TR>
+                </TABLE>
+            >
+            fillcolor="#233448"
+            color="#D95F02"
+        ]
+
+        crossmethod [
+            label=<
+                <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                    <TR><TD><FONT FACE="Helvetica-Bold" POINT-SIZE="11" COLOR="#FFC107">Cross-Method</FONT></TD></TR>
+                    <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">TOPSIS · VIKOR · WPM</FONT></TD></TR>
+                    <TR><TD><FONT POINT-SIZE="9" COLOR="#CCCCCC">100% concordance</FONT></TD></TR>
+                </TABLE>
+            >
+            fillcolor="#233448"
+            color="#FFC107"
+        ]
+    }
+
+    // ── OUTPUT ──
+    output [
+        label=<
+            <TABLE BORDER="0" CELLBORDER="0" CELLSPACING="2">
+                <TR><TD><FONT FACE="Helvetica-Bold" POINT-SIZE="13" COLOR="#1B2838">OUTPUT: Ranked Strategy Report</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="10" COLOR="#1B2838">TOPSIS scores · rank stability · Pareto status</FONT></TD></TR>
+                <TR><TD><FONT POINT-SIZE="10" COLOR="#1B2838">rejection reasons · parameter provenance · CIs/SEs</FONT></TD></TR>
+            </TABLE>
+        >
+        fillcolor="#2ECC71"
+        color="#2ECC71"
+        fontcolor="#1B2838"
+    ]
+
+    // ── EDGES ──
+    input -> s1
+    s1 -> s2
+    s2 -> s3
+    s3 -> s4
+    s4 -> s5
+    s5 -> s6
+
+    s6 -> be [label="  guide\ncandidates"]
+    s6 -> pe [label="  guide\ncandidates"]
+    s6 -> hdr [label="  guide\ncandidates"]
+
+    be -> s8
+    pe -> s8
+    hdr -> s8
+
+    s8 -> s9
+    s9 -> pareto
+    s9 -> sensitivity
+    s9 -> crossmethod
+
+    pareto -> output
+    sensitivity -> output
+    crossmethod -> output
+}

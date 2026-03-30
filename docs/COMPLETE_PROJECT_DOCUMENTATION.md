@@ -169,7 +169,7 @@ enFnCas9 (engineered FnCas9) was developed in the Chakraborty laboratory at CSIR
 
 ### 2.6 Multi-Nuclease Landscape (v3)
 
-v3 evaluates five nucleases and seven base editors systematically:
+v3 evaluates five nucleases and nine base editor profiles systematically:
 
 | Nuclease | PAM | Cut Type | Stagger | Specificity | Reference |
 |----------|-----|----------|---------|-------------|-----------|
@@ -189,6 +189,8 @@ v3 evaluates five nucleases and seven base editors systematically:
 | ABE8e-SpCas9-NG | ABE | 3-9 | Moderate | B |
 | ABE8e-SpRY | ABE | 3-9 | Low | B |
 | BE4max-enFnCas9 | CBE | 4-8 | Moderate | B |
+| BE4max-SpCas9-NG | CBE | 4-8 | Moderate | B |
+| BE4max-SpRY | CBE | 4-8 | Low | B |
 
 ---
 
@@ -362,7 +364,7 @@ Below is every file in the project. Files **new in v3** are marked with `[v3]`. 
 | `core/sequence/hgvs_parser.py` | [v3] HGVS clinical notation parser + ClinVar batch ingestion |
 | `core/feasibility/__init__.py` | Package initializer for the feasibility layer |
 | `core/feasibility/pam_scan.py` | [v3-rewrite] Multi-nuclease PAM scanner (SpCas9, enFnCas9, SpCas9-NG, SpRY, Cas12a) |
-| `core/feasibility/base_editing.py` | [v3-rewrite] Multi-nuclease BE engine with 7 editor profiles |
+| `core/feasibility/base_editing.py` | [v3-rewrite] Multi-nuclease BE engine with 9 editor profiles |
 | `core/feasibility/prime_editing.py` | Prime editing feasibility engine |
 | `core/feasibility/hdr_design.py` | HDR feasibility engine with donor type recommendation |
 | `core/feasibility/off_target.py` | [v3] CFD and MIT off-target specificity scoring |
@@ -514,6 +516,8 @@ Below is every file in the project. Files **new in v3** are marked with `[v3]`. 
 ---
 
 ## 5. Data Flow (End-to-End)
+
+![CRISPRArchitect v3 Pipeline Flowchart](../paper/figures/v3/Fig_Pipeline_Flowchart.png)
 
 This section walks through exactly what happens when a user inputs a variant into CRISPRArchitect v3, from raw input to ranked strategy list with sensitivity analysis.
 

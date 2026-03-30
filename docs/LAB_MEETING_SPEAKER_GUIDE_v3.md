@@ -91,7 +91,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 **What to say:**
 > "This finding motivated version 3, which has three major new capabilities."
 >
-> "First, a multi-nuclease engine. Instead of just SpCas9, we now evaluate five nucleases including our own enFnCas9, paired with seven base editors. This expands the PAM space enormously."
+> "First, a multi-nuclease engine. Instead of just SpCas9, we now evaluate five nucleases including our own enFnCas9, paired with nine base editor profiles — three core editors plus six nuclease-specific fusions. This expands the PAM space enormously."
 >
 > "Second, we replaced the simple weighted-sum scoring with TOPSIS — a formal multi-criteria decision method — plus Pareto analysis and Monte Carlo sensitivity analysis. This is mathematically principled and provides uncertainty quantification."
 >

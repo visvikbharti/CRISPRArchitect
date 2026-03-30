@@ -21,7 +21,7 @@ why, and the exact state of every component. Read this before making any changes
 CRISPRArchitect is a computational decision-support tool that recommends the
 optimal genome editing strategy (base editing vs. prime editing vs. HDR) for
 any given pathogenic variant. It evaluates 5 nucleases (SpCas9, enFnCas9,
-SpCas9-NG, SpRY, Cas12a) paired with 7 base editors, uses 6-dimensional
+SpCas9-NG, SpRY, Cas12a) paired with 9 base editor profiles, uses 6-dimensional
 TOPSIS multi-criteria decision analysis with Pareto front analysis and Monte
 Carlo sensitivity quantification, and provides transparent, uncertainty-
 quantified recommendations. Developed by Vishal Bharti under PI Debojyoti
