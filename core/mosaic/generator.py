@@ -49,6 +49,51 @@ from core.models import (
 from core.mosaic.annotation_integration import AnnotationIntegrator
 
 
+# ═══════════════════════════════════════════════════════════════════════════
+# Modality prior scores — rationale
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# These encode the baseline feasibility of each modality BEFORE locus-specific
+# PAM/window checks. They feed into the TOPSIS feasibility dimension.
+#
+# Evidence basis for the ordering (BE > PE > HDR in iPSCs):
+#
+#   Base editing (FEASIBLE=0.95, MARGINAL=0.80):
+#     BE achieves 30-70% efficiency in iPSCs (Komor et al., Nature, 2016;
+#     Gaudelli et al., Nature, 2017). Zero DSBs means no p53 selection.
+#     0.95 = normalized to near-maximum because when PAM+window are verified,
+#     BE is almost always the preferred choice. MARGINAL (0.80) for cases
+#     where the target base is at the edge of the editing window.
+#
+#   Prime editing (FEASIBLE=0.82, MARGINAL=0.68):
+#     PE achieves 5-50% efficiency depending on locus (Anzalone et al.,
+#     Nature, 2019; Chen et al., Cell, 2021). Zero DSBs but lower
+#     efficiency than BE and more complex delivery (pegRNA + PE protein).
+#     0.82 reflects PE's universal mutation-type compatibility offset by
+#     its lower and more variable efficiency vs. BE.
+#
+#   HDR (FEASIBLE=0.72, MARGINAL=0.60):
+#     HDR achieves 5-15% in iPSCs (unenhanced), requires a DSB, and
+#     has p53 selection concerns. 0.72 reflects the DSB requirement
+#     and lower baseline efficiency. MARGINAL (0.60) for guides far
+#     from the edit site.
+#
+# Dual/hybrid strategy priors are derived from single-modality priors
+# with multiplicative penalties for additional complexity:
+#   Dual BE = 0.92 (two independent BE operations, slightly lower than single)
+#   Dual PE = 0.84 (two pegRNAs, moderate complexity)
+#   Sequential HDR = 0.68 (two rounds, each with DSB risk)
+#   Hybrid BE+HDR = 0.80 (one DSB-free + one DSB operation)
+#   Hybrid PE+HDR = 0.76 (similar but PE is less efficient than BE)
+#
+# NOTE: These priors are SECONDARY to the PAM-verified feasibility scores.
+# A strategy with prior 0.95 but no PAM site gets rejected, while a strategy
+# with prior 0.72 and a high-quality guide may rank well. The TOPSIS
+# sensitivity analysis (10,000 weight permutations) explores how sensitive
+# the ranking is to these prior assumptions.
+# ═══════════════════════════════════════════════════════════════════════════
+
+
 class StrategyGenerator:
     """Generate and score all feasible editing strategies.
 

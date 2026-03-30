@@ -93,9 +93,13 @@ from utils.constants import (
 # ---------------------------------------------------------------------------
 
 # Parameters for the Beta distribution used to draw filament coverage.
-# Beta(alpha=8, beta=2) has mean 0.8 and is left-skewed (most values
-# near the top of the range), matching single-molecule observations that
-# RAD51 filaments are usually nearly contiguous.
+# Beta(alpha=8, beta=2) has raw mean 0.8 on [0,1].
+# After rescaling to [0.70, 0.95], the effective mean is:
+#   mean_rescaled = 0.70 + 0.80 * (0.95 - 0.70) = 0.90
+# This means ~90% of the ssDNA is typically coated by RAD51, which
+# matches single-molecule observations that filaments are nearly
+# contiguous under physiological BRCA2 concentrations.
+# Source: Modesti et al., Nature 2007; Hilario et al., 2009.
 _COVERAGE_ALPHA: float = 8.0
 _COVERAGE_BETA: float = 2.0
 

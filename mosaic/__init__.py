@@ -1,6 +1,15 @@
 """
-MOSAIC: Multi-locus Optimized Strategy for Allele-specific Integrated Correction
-=================================================================================
+MOSAIC (Legacy v1): Multi-locus Optimized Strategy for Allele-specific Integrated Correction
+==============================================================================================
+
+.. deprecated:: 3.0.0
+   This module is retained for backward compatibility with the v1 CLI and
+   webapp. For new analyses, use the v3 pipeline instead::
+
+       from core.pipeline.strategy_stage import StrategyPipeline
+
+   The v3 pipeline provides multi-nuclease evaluation, TOPSIS scoring with
+   sensitivity analysis, HGVS input, and consequence-aware ranking.
 
 MOSAIC is a module within the CRISPRArchitect toolkit that helps molecular
 biologists decide the *best editing strategy* when a patient's cells carry

@@ -4,17 +4,19 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "crisprarchitect"
-version = "2.0.0"
-description = "A transcript-aware computational platform for multi-modality genome editing strategy optimization (v2: consequence-guided scoring, ClinVar-benchmarked)"
+version = "3.0.0"
+description = "A transcript-aware computational platform for multi-nuclease genome editing strategy optimization with TOPSIS multi-criteria decision analysis"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.9"
 authors = [
-    {name = "CRISPRArchitect Team"},
+    {name = "Vishal Bharti", email = "vishal.bharti@igib.in"},
+    {name = "Debojyoti Chakraborty", email = "debojyoti.chakraborty@igib.in"},
 ]
 keywords = [
     "CRISPR", "genome-editing", "HDR", "iPSC", "cssDNA",
     "gene-therapy", "bioinformatics", "computational-biology",
+    "base-editing", "prime-editing", "TOPSIS", "enFnCas9",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -45,7 +47,7 @@ dev = [
 ]
 
 [project.scripts]
-crisprarchitect = "cli:main"
+crisprarchitect = "crisprarchitect.cli:main"
 
 [project.urls]
 Homepage = "https://github.com/visvikbharti/CRISPRArchitect"

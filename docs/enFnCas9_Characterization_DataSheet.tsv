@@ -1,0 +1,37 @@
+Parameter	Value	Method	Reference/Source	Notes
+CUT_SITE_CHARACTERIZATION
+Cut_Type	blunt / staggered_5prime / staggered_3prime	run-off sequencing / adapter ligation / other	Published or unpublished	Currently ASSUMED as staggered_5prime
+If_Staggered_Overhang_Length_bp		direct measurement (bp)		Currently ASSUMED as 3 bp
+Overhang_Polarity	5prime / 3prime			Currently ASSUMED as 5prime
+Number_of_Loci_Tested		integer		More loci = stronger evidence
+Loci_Tested_Details		gene:position for each locus tested
+
+HDR_EFFICIENCY_COMPARISON (enFnCas9 vs SpCas9, same locus, same donor)
+Locus_1_Gene
+Locus_1_enFnCas9_HDR_Percent		% knock-in with enFnCas9
+Locus_1_SpCas9_HDR_Percent		% knock-in with SpCas9 (same conditions)
+Locus_1_Fold_Change		enFnCas9/SpCas9 ratio	Currently ASSUMED as 1.5x
+Locus_1_Donor_Type		ssODN / cssDNA / dsDNA
+Locus_1_Cell_Type		iPSC / HEK293T / other
+Locus_2_Gene
+Locus_2_enFnCas9_HDR_Percent
+Locus_2_SpCas9_HDR_Percent
+Locus_2_Fold_Change
+Locus_2_Donor_Type
+Locus_2_Cell_Type
+Locus_3_Gene
+Locus_3_enFnCas9_HDR_Percent
+Locus_3_SpCas9_HDR_Percent
+Locus_3_Fold_Change
+
+enFnCas9_ABE8e_EDITING_WINDOW (if tested)
+ABE8e_enFnCas9_Window_Start		Position number (PAM-distal = 1)	Currently ASSUMED as 3 (from SpCas9-ABE8e)
+ABE8e_enFnCas9_Window_End		Position number	Currently ASSUMED as 9
+Number_of_Sites_Tested
+Peak_Editing_Positions		Comma-separated positions with highest efficiency
+Cell_Type_Tested
+
+SPECIFICITY_DATA
+enFnCas9_Off_Target_Sites_Detected		Integer (from GUIDE-seq or similar)
+SpCas9_Off_Target_Sites_Detected		At same loci (for comparison)
+Method		GUIDE-seq / Digenome-seq / CIRCLE-seq / other

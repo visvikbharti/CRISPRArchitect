@@ -105,18 +105,34 @@ from utils.constants import (
 # ---------------------------------------------------------------------------
 
 # Fractional reduction in D-loop collapse probability for circular donors.
-# Circular topology prevents donor-strand fraying, making the D-loop more
-# kinetically stable.
-# Source: inferred from improved HDR efficiency with cssDNA donors;
-#         Iyer et al., CRISPR J. 2022.
-_CIRCULAR_DLOOP_STABILITY_BOOST: float = 0.20  # 20 % reduction in p
+# [ASSUMED] No direct biophysical measurement of D-loop stability exists
+# for circular vs. linear ssDNA donors.
+#
+# Rationale: Iyer et al. (CRISPR J, 2022) showed cssDNA achieves ~1.9x
+# higher HDR than linear ssDNA. Part of this is exonuclease resistance
+# (increased donor half-life), but some may also reflect D-loop stability.
+# If the HDR enhancement from donor topology (1.9x) is partitioned between
+# donor persistence (~60%) and D-loop stability (~40%), the D-loop
+# contribution is ~1.36x longer tracts, requiring ~26% reduction in p.
+# We use 20% as a conservative estimate of the D-loop component alone.
+#
+# This parameter is a modeling assumption and should be reported as such.
+_CIRCULAR_DLOOP_STABILITY_BOOST: float = 0.20
 
 # Fractional reduction in D-loop collapse probability for staggered cuts.
-# Longer resection -> longer RAD51 filament -> more base-pairs of
-# heteroduplex -> greater D-loop thermodynamic stability.
-# Source: inferred from vCas9 (staggered cut) HDR enhancement;
-#         Chauhan et al., PNAS 2023.
-_STAGGER_DLOOP_STABILITY_BOOST: float = 0.15  # 15 % reduction in p
+# [ASSUMED] No direct biophysical measurement exists.
+#
+# Rationale: Staggered cuts (5' overhangs) generate longer resected 3'
+# overhangs on the overhang-bearing side. Longer RAD51 filaments create
+# more base-pairs of initial heteroduplex, which thermodynamically
+# stabilizes the D-loop against helicase-mediated dissolution (Nassif
+# et al., Genes Dev, 1994; McMahill et al., PNAS, 2007).
+# Chauhan et al. (PNAS, 2023) showed vCas9 (6 bp stagger) achieves 1.9x
+# HDR improvement. Attributing ~50% to D-loop stability and ~50% to
+# enhanced resection: 1.45x tract-length increase ≈ 15% reduction in p.
+#
+# This is a modeling assumption; the partitioning is uncertain.
+_STAGGER_DLOOP_STABILITY_BOOST: float = 0.15
 
 
 @dataclass
@@ -160,12 +176,29 @@ class SynthesisSimulator:
     terminating synthesis.  This creates a geometric distribution of tract
     lengths.
 
+    **Choice of geometric distribution (modeling decision)**:
+    The geometric models a *constant hazard rate* — the probability of
+    D-loop collapse is the same at bp 1 and bp 1000. This is the simplest
+    (memoryless) model and produces a good qualitative fit to published
+    tract-length distributions (right-skewed, most tracts <1 kb, rare
+    events to 2-5 kb; Elliott et al., MCB 1998; Kan et al., Genome Res 2017).
+
+    Biological processes that could violate constant hazard:
+    - **Increasing hazard** (D-loop gets less stable as it grows): would
+      produce a Weibull(shape>1) distribution with shorter tails.
+    - **Decreasing hazard** (polymerase becomes more processive once
+      started): would produce a Weibull(shape<1) with heavier tails.
+
+    We use the geometric as a principled baseline. A Weibull alternative
+    could be explored in sensitivity analysis but requires fitting the
+    shape parameter to mammalian tract-length data, which is sparse.
+
     Factors that modulate D-loop stability (and hence tract length):
-    - **Donor topology**: circular ssDNA stabilises the D-loop (−20 % *p*)
+    - **Donor topology**: circular ssDNA stabilises the D-loop (−20% *p*)
     - **Cut stagger**: staggered cuts produce more resection and a longer
-      RAD51 filament, stabilising the D-loop (−15 % *p*)
-    - (Future extensions could add: Pol δ processivity factors, chromatin
-      context, RAD51 mutants, etc.)
+      RAD51 filament, stabilising the D-loop (−15% *p*)
+    - (Future extensions could add: Pol delta processivity factors, chromatin
+      context, RAD51 mutants, Weibull hazard model, etc.)
 
     Parameters
     ----------
@@ -290,22 +323,24 @@ class SynthesisSimulator:
         tract_lengths = self._rng.geometric(p, size=n_simulations)
 
         # ------------------------------------------------------------------
-        # Step 3: Clip to biologically plausible bounds
+        # Step 3: Clip to biologically plausible upper bound only
         # ------------------------------------------------------------------
-        # Minimum: CONVERSION_TRACT_MIN_BP (50 bp from constants.py).
-        #   Very short tracts (< 50 bp) are unlikely to produce detectable
-        #   gene conversion because mismatch repair may erase the
-        #   heteroduplex before the next round of replication.
-        #   (Mitchel et al., Genetics 2010)
-        # Maximum: CONVERSION_TRACT_MAX_BP (5000 bp from constants.py).
+        # Upper bound: CONVERSION_TRACT_MAX_BP (5000 bp from constants.py).
         #   Extremely long tracts are rare because RTEL1 and BLM helicases
         #   actively disassemble D-loops.  Tracts beyond 5 kb are
         #   essentially never observed in mammalian mitotic cells.
-        #   (Kan et al., Mol Cell 2017)
-        tract_lengths = np.clip(
-            tract_lengths,
-            CONVERSION_TRACT_MIN_BP,
-            CONVERSION_TRACT_MAX_BP,
+        #   (Kan et al., Genome Res 2017)
+        #
+        # Lower bound: NOT clipped here. Short tracts (< 50 bp) are passed
+        #   through to the simulator, which filters them via the HDR success
+        #   gate (invasion_success & tract_length > 0). Previous versions
+        #   clipped to CONVERSION_TRACT_MIN_BP, which inflated the mean
+        #   tract length by ~10% (bumping ~9.5% of draws from their true
+        #   value to 50 bp). Removing the lower clip is statistically
+        #   correct: short tracts that would be erased by mismatch repair
+        #   are better modeled as HDR failures than as 50 bp tracts.
+        tract_lengths = np.minimum(
+            tract_lengths, CONVERSION_TRACT_MAX_BP
         ).astype(np.float64)
 
         return SynthesisResult(

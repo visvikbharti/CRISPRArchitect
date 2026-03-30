@@ -1,0 +1,84 @@
+Case_ID	Section	Field	Value	Notes/Instructions
+CASE_1	Target	Gene_Name		e.g., RPE65, NF1, CFTR, HBB
+CASE_1	Target	HGVS_Notation		e.g., NM_000329.3:c.271C>T (if known)
+CASE_1	Target	Chromosome		e.g., 1, 17, X
+CASE_1	Target	Genomic_Position_GRCh38		1-based coordinate on GRCh38
+CASE_1	Target	Ref_Allele		e.g., C, G, AT (deletion), - (insertion)
+CASE_1	Target	Alt_Allele		e.g., T, A, - (deletion), ATG (insertion)
+CASE_1	Target	Mutation_Type		transition / transversion / insertion / deletion / complex
+CASE_1	Strategy	Nuclease_Used		SpCas9 / enFnCas9 / Cas12a / other (specify)
+CASE_1	Strategy	Modality		base_editing / prime_editing / HDR / multiple (specify)
+CASE_1	Strategy	Guide_RNA_Sequence_20mer		20-nt protospacer sequence (5' to 3', no PAM)
+CASE_1	Strategy	PAM_Sequence		e.g., NGG, NRG, TTTV
+CASE_1	Strategy	If_BE_Editor_Name		ABE7.10 / ABE8e / BE4max / CBE4 / other
+CASE_1	Strategy	If_BE_Target_Position_in_Window		Position of target base in protospacer (1-20, PAM-distal=1)
+CASE_1	Strategy	If_PE_PBS_Length_nt		Primer binding site length in nt
+CASE_1	Strategy	If_PE_RT_Template_Length_nt		Reverse transcriptase template length in nt
+CASE_1	Strategy	If_HDR_Donor_Type		ssODN / cssDNA / lssDNA / dsDNA / AAV6 / other
+CASE_1	Strategy	If_HDR_Left_HA_Length_bp		Left homology arm length in bp
+CASE_1	Strategy	If_HDR_Right_HA_Length_bp		Right homology arm length in bp
+CASE_1	Strategy	If_HDR_Insert_Size_bp		Size of sequence being inserted/replaced
+CASE_1	Conditions	Cell_Type		e.g., iPSC, HEK293T, K562, patient-derived iPSC
+CASE_1	Conditions	Cell_Line_Name		e.g., WTC-11, KOLF2.1J, patient ID
+CASE_1	Conditions	Delivery_Method		electroporation / lipofection / nucleofection
+CASE_1	Conditions	RNP_or_Plasmid		RNP / plasmid / mRNA
+CASE_1	Conditions	HDR_Enhancement		none / NU7441 / SCR7 / cold_shock / cell_cycle_sync / other
+CASE_1	Outcomes	Editing_Efficiency_Percent		% of alleles with intended edit (by NGS or Sanger)
+CASE_1	Outcomes	Measurement_Method		amplicon_NGS / Sanger / ddPCR / TIDE / ICE / other
+CASE_1	Outcomes	If_BE_On_Target_Edit_Rate		% editing at the target base only
+CASE_1	Outcomes	If_BE_Bystander_Edit_Positions		Comma-separated: position:rate (e.g., 4:12%,6:45%,7:3%)
+CASE_1	Outcomes	If_HDR_KnockIn_Rate_Percent		% of alleles with correct knock-in
+CASE_1	Outcomes	If_HDR_NHEJ_Rate_Percent		% of alleles with indels (no knock-in)
+CASE_1	Outcomes	If_HDR_Large_Deletion_Detected		yes / no / not_tested
+CASE_1	Outcomes	Clones_Screened		Total number of clones genotyped
+CASE_1	Outcomes	Correctly_Edited_Clones		Number with intended correction confirmed
+CASE_1	Outcomes	Intended_Correction_Achieved		yes / no / partial
+CASE_1	Outcomes	Multiple_Strategies_Compared		yes / no — if yes, fill in additional CASE entries
+CASE_1	QC	Off_Target_Analysis_Done		yes / no
+CASE_1	QC	Off_Target_Method		GUIDE-seq / amplicon_NGS / in_silico_only / none
+CASE_1	QC	Off_Target_Sites_Detected		Number of validated off-target sites (0 if none)
+CASE_1	QC	Karyotype_Normal		yes / no / not_tested
+CASE_1	QC	TP53_Sequencing_Done		yes / no
+CASE_1	QC	TP53_Mutation_Detected		yes / no / not_tested
+CASE_1	Notes	Free_Text_Notes		Any additional context, complications, or observations
+CASE_2	Target	Gene_Name		(copy rows above for each additional case)
+CASE_2	Target	HGVS_Notation
+CASE_2	Target	Chromosome
+CASE_2	Target	Genomic_Position_GRCh38
+CASE_2	Target	Ref_Allele
+CASE_2	Target	Alt_Allele
+CASE_2	Target	Mutation_Type
+CASE_2	Strategy	Nuclease_Used
+CASE_2	Strategy	Modality
+CASE_2	Strategy	Guide_RNA_Sequence_20mer
+CASE_2	Strategy	PAM_Sequence
+CASE_2	Strategy	If_BE_Editor_Name
+CASE_2	Strategy	If_HDR_Donor_Type
+CASE_2	Strategy	If_HDR_Left_HA_Length_bp
+CASE_2	Strategy	If_HDR_Right_HA_Length_bp
+CASE_2	Conditions	Cell_Type
+CASE_2	Conditions	Delivery_Method
+CASE_2	Conditions	HDR_Enhancement
+CASE_2	Outcomes	Editing_Efficiency_Percent
+CASE_2	Outcomes	Measurement_Method
+CASE_2	Outcomes	If_HDR_KnockIn_Rate_Percent
+CASE_2	Outcomes	Clones_Screened
+CASE_2	Outcomes	Correctly_Edited_Clones
+CASE_2	Outcomes	Intended_Correction_Achieved
+CASE_2	QC	Karyotype_Normal
+CASE_2	Notes	Free_Text_Notes
+CASE_3	Target	Gene_Name
+CASE_3	Target	HGVS_Notation
+CASE_3	Target	Chromosome
+CASE_3	Target	Genomic_Position_GRCh38
+CASE_3	Target	Ref_Allele
+CASE_3	Target	Alt_Allele
+CASE_3	Strategy	Nuclease_Used
+CASE_3	Strategy	Modality
+CASE_3	Strategy	Guide_RNA_Sequence_20mer
+CASE_3	Conditions	Cell_Type
+CASE_3	Conditions	Delivery_Method
+CASE_3	Outcomes	Editing_Efficiency_Percent
+CASE_3	Outcomes	Measurement_Method
+CASE_3	Outcomes	Intended_Correction_Achieved
+CASE_3	Notes	Free_Text_Notes

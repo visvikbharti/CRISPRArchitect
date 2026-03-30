@@ -1,12 +1,13 @@
-# CRISPRArchitect: Complete Project Documentation
+# CRISPRArchitect: Complete Project Documentation (v3)
 
-**Transcript-aware, consequence-guided design of genome editing strategies across modalities**
+**Transcript-aware, consequence-guided, multi-nuclease genome editing strategy design with TOPSIS ranking and sensitivity analysis**
 
 Authors: Vishal Bharti and Debojyoti Chakraborty
 Institution: CSIR-Institute of Genomics and Integrative Biology (CSIR-IGIB), New Delhi, India
 Repository: https://github.com/visvikbharti/CRISPRArchitect
 License: MIT
-Version: v2 (March 2026)
+Version: v3.0.0 (March 2026)
+Last Updated: 2026-03-30
 
 ---
 
@@ -14,16 +15,20 @@ Version: v2 (March 2026)
 
 1. [Project Genesis and Motivation](#1-project-genesis-and-motivation)
 2. [Scientific Background](#2-scientific-background)
-3. [Project Architecture (v1 + v2)](#3-project-architecture-v1--v2)
+3. [Project Architecture (v1 + v2 + v3)](#3-project-architecture-v1--v2--v3)
 4. [Complete File Structure](#4-complete-file-structure)
 5. [Data Flow (End-to-End)](#5-data-flow-end-to-end)
 6. [Scoring System (Detailed)](#6-scoring-system-detailed)
-7. [Benchmark Design and Execution](#7-benchmark-design-and-execution)
-8. [Results and Interpretation](#8-results-and-interpretation)
-9. [Validation Summary](#9-validation-summary)
-10. [Limitations (Honest and Detailed)](#10-limitations-honest-and-detailed)
-11. [Future Directions](#11-future-directions)
-12. [Technical Details](#12-technical-details)
+7. [Parameter Provenance](#7-parameter-provenance)
+8. [Benchmark Design and Execution](#8-benchmark-design-and-execution)
+9. [Results and Interpretation](#9-results-and-interpretation)
+10. [ConversionSim: Scope and Validation](#10-conversionsim-scope-and-validation)
+11. [Citation Integrity](#11-citation-integrity)
+12. [Limitations (Honest and Detailed)](#12-limitations-honest-and-detailed)
+13. [Future Directions](#13-future-directions)
+14. [Technical Details](#14-technical-details)
+15. [Appendix A: Verified Numbers](#appendix-a-verified-numbers)
+16. [Appendix B: Key References](#appendix-b-key-references)
 
 ---
 
@@ -31,7 +36,7 @@ Version: v2 (March 2026)
 
 ### 1.1 Where the Idea Came From
 
-CRISPRArchitect was born in the Debojyoti Chakraborty laboratory at CSIR-IGIB, New Delhi, a group with deep expertise in CRISPR-based genome editing in human induced pluripotent stem cells (iPSCs). The Chakraborty lab is best known for developing **enFnCas9**, a variant of FnCas9 engineered for broadened PAM recognition (NRG instead of NGG), which substantially expands the targetable space of the genome. The lab routinely corrects pathogenic mutations in patient-derived iPSCs as part of disease modeling and therapeutic development pipelines.
+CRISPRArchitect was born in the Debojyoti Chakraborty laboratory at CSIR-IGIB, New Delhi, a group with deep expertise in CRISPR-based genome editing in human induced pluripotent stem cells (iPSCs). The Chakraborty lab is best known for developing **enFnCas9**, an engineered variant of FnCas9 with broadened PAM recognition (NRG instead of NGG), which substantially expands the targetable space of the genome (Acharya et al., Nat Commun, 2024, 15:5471; PMID 38942756). The lab routinely corrects pathogenic mutations in patient-derived iPSCs as part of disease modeling and therapeutic development pipelines.
 
 The practical challenge that motivated CRISPRArchitect arose from a recurring experimental scenario: a patient-derived iPSC line carries **compound heterozygous mutations** -- two different pathogenic variants on the two alleles of the same gene. To create an isogenic control or a therapeutic cell product, both mutations must be corrected. But how? Should each mutation be corrected by base editing (if it is a compatible transition)? Should prime editing be used (if base editing windows are unavailable)? Should HDR be used with a cssDNA donor (if the mutations are close enough for single-template correction)? What if one mutation is a transition and the other is a transversion -- should a hybrid strategy (base editing for one, prime editing for the other) be employed?
 
@@ -39,10 +44,11 @@ The practical challenge that motivated CRISPRArchitect arose from a recurring ex
 
 When correcting compound heterozygous mutations in iPSCs, the researcher faces a combinatorial decision space: for n mutations, each potentially correctable by base editing (ABE or CBE), prime editing, or HDR (with ssODN, cssDNA, lssDNA, or dsDNA donors), the number of possible strategies grows rapidly. Moreover, the choice is not purely technical -- it depends on:
 
-- **Sequence context**: Is a PAM available that positions the target base within the editing window? For base editing, the target nucleotide must fall within a narrow 4-nucleotide window (positions 4-7 for ABE, 4-8 for CBE) relative to the protospacer. This is a hard constraint that cannot be overcome by better reagents.
+- **Sequence context**: Is a PAM available that positions the target base within the editing window? For base editing, the target nucleotide must fall within a narrow window (positions 4-7 for ABE7.10, 4-8 for CBE, 3-9 for ABE8e extended window) relative to the protospacer. This is a hard constraint that cannot be overcome by better reagents.
 - **Biological consequences**: Will bystander edits introduce missense or nonsense changes? Is the variant near a splice site? Will the correction create unintended coding changes?
 - **Safety profile**: iPSCs are exquisitely sensitive to double-strand breaks (DSBs) because they have active p53 pathways. DSBs trigger p53-mediated apoptosis, and surviving clones may have acquired p53 mutations or chromosomal rearrangements. DSB-free approaches (base editing, prime editing) are therefore strongly preferred in this cell type.
 - **Practical complexity**: How many editing rounds, donors, and screening colonies are required? Sequential approaches are safer but slower; simultaneous approaches are faster but riskier.
+- **Nuclease-editor combinatorics**: v3 revealed that the choice of nuclease (SpCas9, enFnCas9, SpCas9-NG, SpRY, Cas12a) and editor version (ABE7.10, ABE8e, BE4max) matters as much as the choice of editing modality. A target that is unreachable by ABE7.10+SpCas9 may become accessible with ABE8e+enFnCas9.
 
 No single existing tool addresses this decision space.
 
@@ -50,22 +56,28 @@ No single existing tool addresses this decision space.
 
 The genome editing computational tool landscape in 2024-2026 is fragmented by modality:
 
-- **BE-Hive** (Arbab et al., Cell, 2020): Predicts base editing outcomes (bystander editing profiles) for a given guide, but evaluates only base editing. It does not compare BE to PE or HDR, does not perform transcript-aware annotation, and does not score biological consequences.
-- **PrimeDesign** (Hsu et al., Nature Biotechnology, 2021): Designs pegRNAs for prime editing targets, but evaluates only prime editing. It does not assess whether base editing might be simpler for a compatible transition, or whether HDR with a cssDNA donor might be preferable for a multi-site correction.
-- **CRISPOR** (Concordet and Haeussler, Nucleic Acids Research, 2018): Excellent guide RNA design tool with off-target prediction, but it does not recommend editing strategies. It helps you design a guide once you have decided on a strategy, but does not help you decide between BE, PE, and HDR.
-- **CRISPick** (Doench et al.): Guide scoring for CRISPR knockout screens, not editing strategy recommendation.
+- **BE-Hive** (Arbab et al., Cell, 2020; PMID 32533916): Predicts base editing outcomes for a given guide, but evaluates only base editing. Does not compare BE to PE or HDR.
+- **PrimeDesign** (Hsu et al., Nature Biotechnology, 2021): Designs pegRNAs for prime editing targets, but evaluates only prime editing.
+- **CRISPOR** (Concordet and Haeussler, NAR, 2018; PMID 29762716): Excellent guide RNA design tool with off-target prediction, but does not recommend editing strategies.
+- **CRISPick** (Doench et al., Nat Biotechnol, 2016; PMID 26780180): Guide scoring for CRISPR knockout screens, not editing strategy recommendation.
 
-None of these tools provides a **unified framework** that (a) evaluates all three major editing modalities side by side, (b) incorporates transcript-level context (exon structure, coding frame, splice proximity), (c) scores downstream biological consequences (bystander mutations, splice disruption), and (d) produces ranked recommendations with transparent reasoning.
+None of these tools provides a **unified framework** that (a) evaluates all three major editing modalities side by side, (b) systematically tests multiple nuclease-editor combinations, (c) incorporates transcript-level context (exon structure, coding frame, splice proximity), (d) scores downstream biological consequences (bystander mutations, splice disruption), (e) produces ranked recommendations with TOPSIS multi-criteria decision analysis, and (f) reports rank stability via Monte Carlo sensitivity analysis.
 
 ### 1.4 The Hypothesis
 
 CRISPRArchitect tests a specific hypothesis:
 
-> **A unified, transcript-aware, consequence-guided computational framework will make better editing strategy recommendations than modality-specific tools used in isolation.**
+> **A unified, transcript-aware, consequence-guided, multi-nuclease computational framework will make better editing strategy recommendations than modality-specific tools used in isolation.**
 
 "Better" is operationalized as: when the framework's top-ranked strategy is compared against expert-defined truth labels (determined by biological reasoning from the published literature), the agreement rate (top-1 accuracy) exceeds that achievable by simple heuristic rules (e.g., "always use PE" or "use BE if it's a transition, otherwise PE").
 
-The framework is designed to be transparent (every score component is interpretable), extensible (new nucleases, cell types, or modalities can be added), and grounded in published biology (every parameter has a literature citation).
+### 1.5 Evolution: v1 to v2 to v3
+
+| Version | Date | Key Contribution |
+|---------|------|-----------------|
+| v1 | Jan 2026 | Foundation: ConversionSim, MOSAIC, TopoPred, ChromBridge, LoopSim (~24,000 LOC) |
+| v2 | Mar 2026 | Transcript-aware pipeline: sequence mapping, PAM-verified feasibility, consequence scoring, 30-case benchmark (~11,000 LOC added) |
+| v3 | Mar 2026 | Multi-nuclease engine, TOPSIS 6D scoring, Pareto front analysis, VIKOR/WPM comparison methods, sensitivity analysis, HGVS parser, off-target scoring, bystander triple-counting fix (~12,500 LOC total core) |
 
 ---
 
@@ -75,25 +87,22 @@ The framework is designed to be transparent (every score component is interpreta
 
 Base editors are fusion proteins that combine a catalytically impaired Cas protein (nickase or dead Cas9) with a nucleotide deaminase enzyme. They convert one base to another without introducing a double-strand break.
 
-**Adenine Base Editors (ABE)**: Developed by Gaudelli et al. (Nature, 2017). ABE converts adenine (A) to inosine (I), which is read as guanine (G) by the cellular machinery. Net effect: A-to-G conversion (or T-to-C on the complementary strand). The most widely used variant is ABE8e (Richter et al., Nature Biotechnology, 2020).
+**Adenine Base Editors (ABE)**: Developed by Gaudelli et al. (Nature, 2017; PMID 29160308). ABE converts adenine (A) to inosine (I), which is read as guanine (G) by the cellular machinery. Net effect: A-to-G conversion (or T-to-C on the complementary strand).
 
-- Editing window: positions 4-7 within the 20-nt protospacer (1-indexed from the PAM-distal end)
-- The target adenine must be within this window for efficient editing
-- Other adenines within the window may also be edited (bystander editing)
+- **ABE7.10**: Editing window positions 4-7 within the 20-nt protospacer (1-indexed from the PAM-distal end). The original ABE with TadA-TadA* heterodimer.
+- **ABE8e**: Extended editing window positions **3-9** (Richter et al., Nat Biotechnol, 2020; PMID 32433547). ABE8e is more processive than ABE7.10 due to the evolved TadA-8e monomer and shows activity at positions 3 and 9 in addition to the canonical 4-8 range (Richter et al., 2020, Fig 2). **Important note**: The **canonical** high-efficiency window for ABE8e is positions **4-8**; positions 3 and 9 have reduced but nonzero activity. CRISPRArchitect uses the extended 3-9 window as a deliberate modeling choice to maximize rescue of borderline cases. Users should be aware that targets at positions 3 or 9 will have lower editing efficiency than targets at positions 4-8.
 
-**Cytosine Base Editors (CBE)**: Developed by Komor et al. (Nature, 2016). CBE converts cytosine (C) to uracil (U), which is read as thymine (T). Net effect: C-to-T conversion (or G-to-A on the complementary strand).
+**Cytosine Base Editors (CBE)**: Developed by Komor et al. (Nature, 2016; PMID 27096365). CBE converts cytosine (C) to uracil (U), which is read as thymine (T). Net effect: C-to-T conversion (or G-to-A on the complementary strand).
 
-- Editing window: positions 4-8 within the 20-nt protospacer
-- Slightly wider window than ABE
-- Other cytosines within the window are bystander risks
+- **BE4max**: Editing window positions 4-8 (Koblan et al., Nat Biotechnol, 2018; PMID 29813047). Optimized CBE with APOBEC1 + UGI.
 
 **Key constraint**: Base editors can only perform transition mutations (purine-to-purine or pyrimidine-to-pyrimidine). ABE does A>G; CBE does C>T. Transversions (e.g., A>C, G>T) cannot be corrected by base editing. Furthermore, even for compatible transitions, a suitable PAM must exist at the precise spacing to place the target base within the editing window -- a constraint that CRISPRArchitect reveals is more restrictive than commonly appreciated.
 
-**Bystander risk**: Any same-type base (A for ABE, C for CBE) within the editing window may be edited along with the target. If a bystander edit falls in a coding region, it may introduce a missense or nonsense change. CRISPRArchitect classifies all bystander consequences and penalizes strategies with deleterious bystanders.
+**Bystander risk**: Any same-type base (A for ABE, C for CBE) within the editing window may be edited along with the target. If a bystander edit falls in a coding region, it may introduce a missense or nonsense change. CRISPRArchitect classifies all bystander consequences and penalizes strategies with deleterious bystanders via the 6th TOPSIS dimension.
 
 ### 2.2 Prime Editing Biology
 
-Prime editing was developed by Anzalone et al. (Nature, 2019) and represents a fundamentally different approach: instead of chemically converting a base, prime editing uses a reverse transcriptase fused to a Cas9 nickase to directly write new genetic information into the genome.
+Prime editing was developed by Anzalone et al. (Nature, 2019; PMID 31634902) and represents a fundamentally different approach: instead of chemically converting a base, prime editing uses a reverse transcriptase fused to a Cas9 nickase to directly write new genetic information into the genome.
 
 **pegRNA design**: The prime editing guide RNA (pegRNA) contains three functional elements:
 1. **Spacer** (20 nt): Directs Cas9 nickase to the target site
@@ -102,1221 +111,1094 @@ Prime editing was developed by Anzalone et al. (Nature, 2019) and represents a f
 
 **PE3 nicking**: To improve efficiency, a second nicking guide is placed 40-100 bp away on the opposite strand. This creates a nick that biases mismatch repair toward incorporating the edit. CRISPRArchitect searches for suitable PE3 nicking guides automatically.
 
-**Advantages over base editing**:
-- Can install any substitution (transitions AND transversions)
-- Can install small insertions (up to ~40 bp) and deletions (up to ~80 bp)
-- No editing window constraint -- the RT template directly encodes the edit
-- No bystander risk (only the intended edit is written)
-- No DSB (only nicks), making it safer than HDR
+**Advantages over base editing**: Can install any substitution (transitions AND transversions), small insertions (up to ~40 bp) and deletions (up to ~80 bp), no editing window constraint, no bystander risk, no DSB.
 
 **Limitations**: Lower efficiency than base editing for compatible transitions; pegRNA design complexity; sensitivity to PBS/RT template length optimization.
 
 ### 2.3 HDR Biology
 
-Homology-Directed Repair (HDR) is the classical approach for precise genome editing. It requires:
-
-1. **A DSB at or near the target site**: Created by Cas9 (or another nuclease). The DSB activates the cellular DNA repair machinery.
-2. **A donor template**: Provides the desired sequence flanked by homology arms. The cell copies information from the donor into the genome.
+Homology-Directed Repair (HDR) is the classical approach for precise genome editing. It requires a DSB at or near the target site and a donor template providing the desired sequence flanked by homology arms.
 
 **The repair process (SDSA pathway)**:
-1. **End resection**: After the DSB, 5'-to-3' exonucleases (MRE11, EXO1) chew back the 5' ends, creating 3' single-stranded overhangs (~200-2,000 bp)
+1. **End resection**: After the DSB, 5'-to-3' exonucleases (MRE11/CtIP short-range, then EXO1 or BLM-DNA2 long-range) chew back the 5' ends, creating 3' single-stranded overhangs (~200 bp short-range, up to several kb long-range)
 2. **RAD51 filament formation**: RAD51 protein coats the single-stranded DNA, forming a nucleoprotein filament
 3. **Strand invasion**: The RAD51 filament searches for and invades the donor template at the homology arm, forming a D-loop
-4. **DNA synthesis**: DNA polymerase extends the invading strand, copying the donor sequence (this copied region is the "gene conversion tract")
+4. **DNA synthesis**: DNA polymerase delta extends the invading strand, copying the donor sequence (this copied region is the "gene conversion tract")
 5. **Displacement (SDSA)**: The newly synthesized strand is displaced from the donor and re-anneals to the other side of the break
 
-**Gene conversion tract**: The length of copied sequence follows a right-skewed, approximately geometric distribution. Median tract lengths for exogenous donors are ~500 bp (range 200-2,000 bp). The probability of incorporating an edit decreases with distance from the cut site, following an exponential decay with a half-life of ~20 bp.
+**Gene conversion tract length**: The length of copied sequence follows a right-skewed, approximately geometric distribution.
+
+**Critical clarification on tract length data from the literature**:
+
+- **Elliott et al., MCB 1998 (PMID 9418857)**: Measured chromosomal gene conversion tracts from I-SceI-induced DSBs in mouse ES cells using endogenous chromosomal substrates (NOT exogenous donors). Found **80% of tracts were <=58 bp**, maximum ~511 bp. This is NOT directly applicable to exogenous long-donor HDR, where tracts are expected to be longer because exogenous donors may form more stable D-loops.
+- **Kan et al., Genome Res 2017 (PMID 28356322)**: Published in *Genome Research* (NOT Mol Cell as previously cited in v2). Measured ODN-mediated editing tracts averaging ~20 bp. This represents the **SSTR pathway** (Single-Strand Template Repair), NOT SDSA. Not applicable to long-donor HDR.
+- **Stark lab, G3 2017 (PMID 28179392)**: Human cell SDSA assay requires >=350 bp of new synthesis for product formation, confirming that SDSA can produce tracts of several hundred bp in human cells with exogenous donors.
+
+ConversionSim models the SDSA pathway with mean tract length ~500 bp (p=0.002 per bp), which is consistent with the functional evidence from long-donor experiments but is explicitly NOT calibrated to the Elliott (endogenous substrate) or Kan (SSTR pathway) data.
 
 **Donor types and their properties**:
 
-| Donor Type | Homology Arms | Best For | Efficiency |
-|------------|--------------|----------|------------|
-| ssODN | 30-90 bp each | Edits within 30 bp of cut | Highest for proximal edits |
-| cssDNA | 300 bp each | Edits within 5,000 bp of cut | ~2x better than lssDNA |
-| lssDNA | 300 bp each | Moderate distance edits | Baseline |
-| dsDNA | 800 bp each | Large edits, gene insertion | Lowest per-template |
+| Donor Type | Homology Arms | Best For | Relative Effectiveness |
+|------------|--------------|----------|----------------------|
+| ssODN | 30-90 bp each | Edits within 30 bp of cut (via SSTR) | Baseline (proximal edits) |
+| cssDNA | 300 bp each | Edits within 5,000 bp of cut (via SDSA) | 3.0x vs linear dsDNA |
+| lssDNA | 300 bp each | Moderate distance edits (via SDSA) | 1.5x vs linear dsDNA |
+| dsDNA | 800 bp each | Large edits, gene insertion | 1.0x (baseline) |
 
-**Cut-to-edit distance**: CRISPRArchitect uses an exponential decay model calibrated to published tract-length distributions (Elliott et al., MCB, 1998) to estimate the probability that the gene conversion tract will reach from the cut site to the desired edit position.
+**Homology arm lengths**: The 300 bp default for cssDNA/lssDNA is based on general HDR design guidelines (reviewed in Banan, 2020, Mol Ther Methods Clin Dev 18:583-596; IDT protocols). This is a practical recommendation, NOT from Iyer et al. (who used 35-60 nt arms for short inserts and ~1 kb arms for endogenous locus tagging, but did NOT systematically optimize arm length).
 
 ### 2.4 Why iPSCs Are Special
 
 Human iPSCs present unique challenges for genome editing that directly influence strategy selection:
 
-**p53 sensitivity**: iPSCs have active, wild-type p53 pathways. DSBs trigger p53-dependent apoptosis, killing the majority of edited cells (Ihry et al., Nature Medicine, 2018). This creates two problems:
-1. **Low survival**: Most cells that receive a DSB die, reducing the number of correctly edited clones available for screening
-2. **Selection for p53 mutations**: The surviving clones are enriched for cells that have acquired p53 loss-of-function mutations -- precisely the cells you do not want for disease modeling or therapy
+**p53 sensitivity**: iPSCs have active, wild-type p53 pathways. DSBs trigger p53-dependent apoptosis, killing the majority of edited cells (Ihry et al., Nat Med, 2018, PMID 29892062; Haapaniemi et al., Nat Med, 2018). This creates two problems:
+1. **Low survival**: ~40-60% colony survival after a single Cas9 cut (Ihry et al., 2018, Fig 2)
+2. **Selection for p53 mutations**: Surviving clones are enriched for p53 loss-of-function mutations
 
-**Karyotype concerns**: DSBs can cause chromosomal rearrangements (Leibowitz et al., Nature Genetics, 2021). Simultaneous DSBs at two loci on different chromosomes create a risk of reciprocal translocations. Even single DSBs can cause large deletions (>10 kb) around the cut site (Kosicki et al., Nature Biotechnology, 2018).
+**Karyotype concerns**: DSBs can cause chromosomal rearrangements. Simultaneous DSBs at two loci create translocation risk (Leibowitz et al., Nat Genet, 2021). Even single DSBs can cause large deletions >10 kb (Kosicki et al., Nat Biotechnol, 2018).
 
-**Implication for strategy scoring**: CRISPRArchitect assigns the Safety component the highest weight (0.30) in its scoring function, directly reflecting the premium on DSB-free approaches in iPSC work. Strategies requiring zero DSBs (base editing, prime editing) receive a safety score of 1.0; strategies requiring one DSB (HDR) receive 0.5; strategies requiring two simultaneous DSBs receive 0.2.
+**Cell cycle**: iPSCs have an unusually short G1 phase with ~30-40% of cells in S/G2 (Becker et al., PNAS 2006; Ghule et al., MCB 2011), which is favorable for HDR (which requires S/G2 phase) but also means more cells are at risk of DSB-induced damage.
 
 ### 2.5 enFnCas9: Broadened PAM from the Chakraborty Lab
 
-enFnCas9 (engineered FnCas9) was developed in the Chakraborty laboratory at CSIR-IGIB. Unlike SpCas9, which requires an NGG PAM (where N is any nucleotide), enFnCas9 recognizes the broader NRG PAM (where R is A or G). This means enFnCas9 can target approximately 50% more sites in the genome compared to SpCas9.
+enFnCas9 (engineered FnCas9) was developed in the Chakraborty laboratory at CSIR-IGIB (Acharya et al., Nat Commun, 2024, 15:5471; PMID 38942756). Unlike SpCas9 (NGG PAM), enFnCas9 recognizes the broader NRG PAM (where R is A or G), approximately doubling the number of targetable sites.
 
-In CRISPRArchitect, enFnCas9 is supported as a first-class nuclease alongside SpCas9. When the user specifies SpCas9 as the primary nuclease, the pipeline automatically also checks enFnCas9 compatibility for base editing, providing a broader view of the editable sequence space.
+**v3 significance**: enFnCas9 was the primary driver of the base editing rescue observed in v3. Of the 6 cases where BE became top-ranked (up from 0 in v2), enFnCas9's NRG PAM provided the critical guide placement in the majority of rescues. The combination of ABE8e's broader editing window (positions 3-9) with enFnCas9's NRG PAM is the key v3 finding.
 
-The broadened PAM partially alleviates the PAM-window bottleneck identified in this work -- at some loci where no SpCas9 guide places the target within the base editing window, an enFnCas9 guide may succeed. However, as the benchmark results demonstrate, broadened PAM does not fully eliminate this constraint.
+**Stagger characteristics**: enFnCas9 is assumed to produce 5' overhangs of 2-5 bp based on FnCas9 crystal structure analysis (Hirano et al., Cell, 2016) and the improved HDR rates observed with enFnCas9. **WARNING**: The exact stagger has NOT been directly measured biochemically as of March 2026. This is an [ASSUMED] parameter.
+
+### 2.6 Multi-Nuclease Landscape (v3)
+
+v3 evaluates five nucleases and seven base editors systematically:
+
+| Nuclease | PAM | Cut Type | Stagger | Specificity | Reference |
+|----------|-----|----------|---------|-------------|-----------|
+| SpCas9 | NGG | Blunt | 0 bp | Moderate | Jinek et al., Science, 2012 |
+| enFnCas9 | NRG | Staggered 5' | ~3 bp [ASSUMED] | High | Acharya et al., Nat Commun, 2024 |
+| SpCas9-NG | NG | Blunt | 0 bp | Low | Nishimasu et al., Science, 2018 |
+| SpRY | NNN | Blunt | 0 bp | Very low | Walton et al., Science, 2020 |
+| Cas12a | TTTV | Staggered 5' | 4-5 bp | High | Zetsche et al., Cell, 2015 |
+| vCas9 | NGG | Staggered 5' | ~6 bp | Moderate | Chauhan et al., PNAS, 2023 |
+
+| Editor | Type | Window | Efficiency Class | Evidence Tier |
+|--------|------|--------|-----------------|--------------|
+| ABE7.10 | ABE | 4-7 | Moderate | A |
+| ABE8e | ABE | 3-9 (extended) | High | A |
+| BE4max | CBE | 4-8 | High | A |
+| ABE8e-enFnCas9 | ABE | 3-9 | Moderate | B |
+| ABE8e-SpCas9-NG | ABE | 3-9 | Moderate | B |
+| ABE8e-SpRY | ABE | 3-9 | Low | B |
+| BE4max-enFnCas9 | CBE | 4-8 | Moderate | B |
 
 ---
 
-## 3. Project Architecture (v1 + v2)
+## 3. Project Architecture (v1 + v2 + v3)
 
-CRISPRArchitect is organized in two layers: the **v1 foundation** (~24,000 lines of code, 6 modules) and the **v2 extension** (~11,000 lines of code, 26 new files). The v1 modules provide validated biological simulations and strategy enumeration logic; the v2 modules add transcript-aware mapping, PAM-verified feasibility, consequence-aware scoring, and a unified pipeline.
+CRISPRArchitect is organized in three layers: the **v1 foundation** (~24,000 lines of code, 6 modules), the **v2 extension** (~11,000 lines of code, 26 new files), and the **v3 additions** (~12,500 lines of total core code including v2 rewrites and new modules).
 
 ### 3.1 v1 Modules (~24,000 LOC)
 
 #### ConversionSim -- Monte Carlo HDR Gene Conversion Tract Simulator
 
-**What it does**: Simulates the HDR process step by step using Monte Carlo methods. Given a DSB position, donor type, nuclease cut geometry, and cell type, ConversionSim runs thousands of virtual repair events to produce distributions of gene conversion tract lengths and incorporation probabilities at specified distances from the cut.
+Simulates the HDR process step by step: end resection, RAD51 filament formation, strand invasion, DNA synthesis, and D-loop collapse. Given a DSB position, donor type, nuclease cut geometry, and cell type, ConversionSim runs thousands of virtual repair events to produce tract length distributions.
 
-**Key classes**:
-- `ResectionSimulator`: Models 5'-to-3' end resection (short-range by MRE11, long-range by EXO1)
-- `FilamentModel`: Models RAD51 filament formation on the resected single-stranded DNA
-- `SynthesisSimulator`: Models DNA polymerase extension along the donor template with stochastic displacement
-- `ConversionSimulator`: Orchestrates the full simulation pipeline
+**Key classes**: `ResectionSimulator`, `FilamentModel`, `SynthesisSimulator`, `ConversionSimulator`
 
-**Biological basis**: Parameters are calibrated to published experimental data:
-- Resection lengths from Symington (Annual Review of Genetics, 2011) and Cejka (Annual Review of Genetics, 2015)
-- Tract length distributions from Elliott et al. (MCB, 1998)
-- SDSA displacement probability fitted to tract data (~0.002 per bp)
-- Donor topology multipliers from Iyer et al. (CRISPR Journal, 2022): cssDNA = 3.0, lssDNA = 1.5
-- Staggered cut enhancement from Chauhan et al. (PNAS, 2023): +15% per bp of overhang
-
-**Validation status**: Validated against 4 published datasets:
-- Elliott et al. (1998): Tract length distribution shape -- PASS (qualitative shape match)
-- Paquet et al. (2016): Distance-dependent incorporation -- POOR FIT (model over-predicts because it models SDSA, not SSTR which dominates for ssODN donors)
-- Iyer et al. (2022): cssDNA vs lssDNA enhancement -- GOOD MATCH (predicted 2.07x, observed 1.9x, within experimental range 1.5-2.1x)
-- Chauhan et al. (2023): Staggered cut enhancement -- GOOD MATCH (predicted 1.82x, observed 1.9x, within experimental range 1.4-2.8x)
+**Scope restriction (v3 update)**: ConversionSim models the SDSA pathway ONLY. It is valid for long-donor HDR (cssDNA, lssDNA, dsDNA with homology arms >=100 bp). It is NOT valid for ssODN-mediated editing, which proceeds via SSTR (Single-Strand Template Repair), a mechanistically distinct, RAD51-independent pathway. See Section 10 for full validation details.
 
 #### MOSAIC -- Multi-locus Optimized Strategy for Allele-specific Integrated Correction
 
-**What it does**: Given a gene structure (exon/intron architecture), mutation positions, cell type, and nuclease choice, MOSAIC enumerates every feasible editing strategy and scores them on efficiency, safety, time, and cost.
-
-**Key classes**:
-- `GeneStructure`: Represents the gene with exon/intron boundaries and lengths
-- `Mutation`: Represents a single mutation with type classification (transition, transversion, insertion, deletion)
-- `StrategyEnumerator`: Generates all possible strategies including SINGLE_TEMPLATE_HDR, DUAL_TEMPLATE_SIMULTANEOUS_HDR, SEQUENTIAL_HDR, BASE_EDITING, PRIME_EDITING, HYBRID approaches, and EXON_DELETION
-- `StrategyScorer`: Scores each strategy on 4 axes (efficiency, safety, time, cost)
-- `Reporter`: Generates human-readable reports with strategy comparisons
-
-**Biological basis**:
-- HDR efficiency estimates from cell-type-specific published rates
-- Translocation risk from the polymer chain model (ChromBridge)
-- p53-mediated selection risk for iPSCs (Ihry et al., 2018)
-- Gene conversion probability from ConversionSim
-
-**Validation status**: Benchmarked against 14 published papers. Author strategy appeared in MOSAIC top-3 in 10/14 cases (71.4% concordance). Perfect 100% accuracy on base editing cases (5/5). Disagreements occurred exclusively where authors used HDR or exon deletion while MOSAIC recommended DSB-free approaches -- defensible recommendations that reflect MOSAIC's safety-first scoring for iPSC context.
+Given gene structure, mutation positions, cell type, and nuclease choice, MOSAIC enumerates every feasible editing strategy and scores them on efficiency, safety, time, and cost. Benchmarked against 14 published papers with 71.4% top-3 concordance.
 
 #### TopoPred -- cssDNA Secondary Structure Analyzer
 
-**What it does**: Analyzes circular single-stranded DNA donor templates for secondary structures that could interfere with HDR. ssDNA is flexible and folds onto itself, forming G-quadruplexes and hairpins that block RAD51 binding and strand invasion.
-
-**Key classes**:
-- `GQuadruplexScanner`: Identifies G-quadruplex-forming sequences using the G3+N1-7G3+N1-7G3+N1-7G3+ pattern
-- `HairpinPredictor`: Finds self-complementary regions and calculates thermodynamic stability using nearest-neighbor energy parameters
-- `AccessibilityScorer`: Computes per-nucleotide accessibility scores for RAD51 binding
-- `DonorOptimizer`: Suggests synonymous codon changes to disrupt deleterious structures
-
-**Biological basis**: G-quadruplex stability from established thermodynamic models; hairpin energy calculations from the nearest-neighbor model; accessibility scoring based on the premise that structured regions are inaccessible to RAD51.
-
-**Validation status**: Qualitative validation -- structures predicted by TopoPred match those predicted by ViennaRNA for test sequences. No systematic quantitative validation against experimental HDR data.
+Analyzes circular single-stranded DNA donor templates for G-quadruplexes and hairpins that could interfere with HDR.
 
 #### ChromBridge -- 3D Chromatin Distance Predictor
 
-**What it does**: Calculates the physical 3D distance between two genomic loci using a polymer chain model of chromatin, and assesses whether a donor template can physically bridge two target sites.
-
-**Key classes**:
-- `PolymerModel`: Implements the Gaussian chain model for chromatin (mean squared displacement = N * b^2, where b = Kuhn length ~300 nm)
-- `DistanceCalculator`: Converts genomic distance (bp) to physical distance (nm)
-- `TADAnalyzer`: Assesses whether two loci are within the same topologically associating domain
-- `TranslocationRiskModel`: Estimates translocation probability from 3D proximity using the empirical power law P(translocation) ~ s^(-1.08)
-
-**Biological basis**: Polymer physics calibrated to FISH and Hi-C data; translocation risk model from Leibowitz et al. (Nature Genetics, 2021).
-
-**Validation status**: Qualitative validation against published Hi-C contact frequency maps. The polymer model gives order-of-magnitude estimates; cell-type-specific Hi-C data would improve precision.
+Calculates physical 3D distance between genomic loci using a Gaussian chain polymer model. Estimates translocation probability from 3D proximity using the empirical power law P(translocation) ~ s^(-1.08).
 
 #### LoopSim -- Cohesin Loop Extrusion Simulator
 
-**What it does**: Simulates the cohesin loop extrusion process that organizes chromatin into loops, and models how loop extrusion affects the spatial proximity between genomic loci.
-
-**Key classes**:
-- `ChromatinFiber`: Represents a chromatin region with nucleosome positions
-- `CohesinExtruder`: Simulates the cohesin ring sliding along chromatin and forming loops
-- `HomologySearchModel`: Models how RAD51-mediated homology search is affected by 3D chromatin organization
-- `LoopSimulator`: Orchestrates the extrusion simulation
-
-**Biological basis**: Cohesin extrusion dynamics from Fudenberg et al. (Cell Reports, 2016); CTCF boundary effects; loop formation kinetics.
-
-**Validation status**: Qualitative validation. The loop extrusion simulator produces contact probability curves consistent with published Hi-C data patterns.
+Simulates cohesin loop extrusion dynamics and their effect on spatial proximity between genomic loci.
 
 #### WebApp -- Streamlit Interactive Interface
 
-**What it does**: Provides a web-based graphical interface for interacting with CRISPRArchitect. Users can input gene names, mutation positions, cell type, and nuclease choice, and receive strategy recommendations with interactive visualizations.
-
-**Key files**:
-- `app.py`: Main Streamlit application with v1 module interfaces
-- `app_v2_page.py`: v2 pipeline interface page
-- `style.py`: Custom styling for the web interface
-- `run.sh`: Launch script
-
-**Validation status**: Functional testing only. The web app is a presentation layer over the validated pipeline modules.
+Web-based GUI for interacting with CRISPRArchitect. Provides gene name input, mutation definition, cell type selection, and real-time strategy ranking display.
 
 ### 3.2 v2 Modules (~11,000 LOC)
 
 #### core/models.py -- Central Data Models
 
-**What it does**: Defines all shared dataclasses and enums used across the v2 pipeline. This is the single source of truth for data structures.
+Defines all shared dataclasses and enums: 22+ dataclasses and 5+ enums (ConsequenceType, EditModality, FeasibilityLabel, EvidenceTier, RiskLevel), plus Strategy, ScoredStrategy, FeasibilityBundle, PipelineResult, etc.
 
-**Major dataclasses** (in dependency order):
+#### core/sequence/ -- Transcript Mapping Layer (5 modules in v2, 6 in v3)
 
-| Dataclass | Purpose |
-|-----------|---------|
-| `ConsequenceType` (Enum) | Functional consequence classification: synonymous, missense, nonsense, splice_donor, splice_acceptor, splice_region, frameshift, inframe_insertion, inframe_deletion, intronic, 5'UTR, 3'UTR, non_coding, unknown |
-| `EditModality` (Enum) | Editing modality: ABE, CBE, PE, HDR_ssODN, HDR_cssDNA, HDR_lssDNA, HDR_dsDNA, exon_deletion |
-| `FeasibilityLabel` (Enum) | Hard verdict: feasible, marginal, not_feasible |
-| `EvidenceTier` (Enum) | Confidence: A (PAM-verified), B (feasible with caveats), C (theoretical) |
-| `RiskLevel` (Enum) | Rearrangement risk: low, moderate, high, very_high |
-| `ExonRecord` | One exon: ID, number, start, end, strand, chromosome |
-| `TranscriptInfo` | Full transcript: ID, gene symbol, chromosome, strand, exon list |
-| `TranscriptCoordinate` | Mapped position: genomic position, exon number, CDS position, codon index/position, splice distance |
-| `GenomicVariantInput` | Raw user input: chromosome, position, ref/alt alleles, gene symbol |
-| `CodingAnnotation` | Consequence: type, HGVS notation, ref/alt codon and amino acid |
-| `ReferenceValidation` | Ref allele check: valid/invalid, expected vs provided |
-| `NormalizedVariant` | Fully annotated variant: combines input, transcript, coordinate, coding, ref validation |
-| `GuideCandidate` | A candidate sgRNA: 20-mer, PAM, strand, cut position, GC content |
-| `BaseEditingFeasibility` | BE result: label, editor type, best guide, bystander info |
-| `PrimeEditingFeasibility` | PE result: label, best guide, PBS/RT lengths, PE3 nick guide |
-| `HDRFeasibility` | HDR result: label, best guide, cut-to-edit distance, donor type |
-| `FeasibilityBundle` | All modality results for one variant |
-| `StrategyStep` | One step in a multi-step strategy |
-| `Strategy` | Complete strategy: name, steps, DSB count, rounds, risk, evidence tier |
-| `ScoredStrategy` | Strategy with scores: safety, feasibility, complexity, risk, confidence, overall |
-| `PipelineResult` | Full pipeline output: transcript, variants, bundles, strategies |
-| `BenchmarkCase` | One benchmark case: variants, truth labels, category |
-| `BenchmarkResult` | One case's evaluation result |
-| `BenchmarkSummary` | Aggregate metrics across all cases |
+- `fetcher.py`: Ensembl REST API client with retry logic (3 retries, exponential backoff)
+- `transcript_mapper.py`: Genomic-to-transcript coordinate mapper
+- `reference_validator.py`: Reference allele validator against Ensembl genome
+- `coding_annotation.py`: Coding consequence annotator (ACMG splice proximity standards)
+- `variant_normalizer.py`: Full normalization orchestrator
 
-#### core/sequence/ -- Transcript Mapping Layer (5 modules)
+#### core/feasibility/ -- Feasibility Engines (4 modules in v2, 5 in v3)
 
-**fetcher.py** (`TranscriptFetcher`): Connects to the Ensembl REST API to retrieve canonical transcript information for a gene. Fetches transcript ID, exon structure, coding sequence coordinates, strand, and biotype. Includes automatic retry logic with exponential backoff (3 retries with waits of 1, 2, 4 seconds) for transient server errors (HTTP 500, 502, 503, 504).
+- `pam_scan.py`: Enhanced PAM scanner for multiple nucleases
+- `base_editing.py`: Base editing feasibility engine with bystander analysis
+- `prime_editing.py`: Prime editing feasibility engine with pegRNA/PE3 design
+- `hdr_design.py`: HDR feasibility engine with donor type recommendation
 
-**transcript_mapper.py** (`TranscriptMapper`): Maps a genomic position to transcript context. Given a genomic coordinate and a TranscriptInfo object, determines which exon the position falls in, computes the CDS position, codon index, codon position (1st, 2nd, or 3rd position), and distance to exon boundaries. Handles both forward-strand and reverse-strand genes correctly.
+#### core/mosaic/ -- Strategy Generation (2 modules)
 
-**reference_validator.py** (`ReferenceValidator`): Validates that the user-provided reference allele matches the Ensembl genome sequence at the specified position. Fetches a window of genomic sequence from Ensembl and compares. For reverse-strand genes, reverse-complements appropriately. Catches genome-build mismatches and strand-orientation errors before they propagate.
-
-**coding_annotation.py** (`CodingAnnotator`): Determines the coding consequence of a variant. Translates reference and alternate codons using the standard genetic code and classifies the consequence as synonymous, missense, nonsense, or frameshift. Annotates splice proximity following ACMG standards: within 2 bp of exon boundary = splice donor/acceptor, 3-8 bp = splice region.
-
-**variant_normalizer.py** (`VariantNormalizer`): Orchestrates the full normalization pipeline: fetches transcript, maps position, validates reference allele, annotates coding consequence, fetches local genomic sequence context. Produces a NormalizedVariant dataclass that contains everything needed for downstream feasibility assessment.
-
-#### core/feasibility/ -- Feasibility Engines (4 modules)
-
-**pam_scan.py** (`EnhancedPAMScanner`): Scans both strands of a genomic sequence window for PAM sequences. Supports SpCas9 (NGG) and enFnCas9 (NRG). For each PAM found, extracts the 20-nt protospacer, calculates the cut position (3 bp upstream of PAM on protospacer strand), computes GC content, and checks for poly-T stretches (>=4 consecutive T's, which terminate Pol III transcription). Returns a ranked list of GuideCandidate objects.
-
-**base_editing.py** (`BaseEditingEngine`): Evaluates base editing feasibility for a given variant. Three-step process: (1) determine if the correction is a compatible transition (A>G for ABE, C>T for CBE), (2) scan for PAM sites that position the target nucleotide within the editing window (positions 4-7 for ABE, 4-8 for CBE), (3) identify and classify bystander edits within the window. Returns BaseEditingFeasibility with label, best guide, bystander count, and bystander consequences.
-
-**prime_editing.py** (`PrimeEditingEngine`): Evaluates prime editing feasibility. For each candidate guide near the target, designs a pegRNA with PBS (default 13 nt) and RT template (10-30 nt) that encodes the desired edit. Searches for a PE3 nicking guide 40-100 bp away on the opposite strand. Feasible for substitutions, insertions up to 40 bp, and deletions up to 80 bp. Returns PrimeEditingFeasibility with guide, PBS/RT lengths, and PE3 nick details.
-
-**hdr_design.py** (`HDRDesignEngine`): Evaluates HDR feasibility. For each candidate guide, calculates cut-to-edit distance and scores it using an exponential decay function. Recommends donor type based on distance: ssODN for <=30 bp, cssDNA for <=5,000 bp, lssDNA or dsDNA for larger spans. Estimates gene conversion probability using the ConversionSim model. Recommends homology arm lengths: 90 bp for ssODN, 300 bp for cssDNA/lssDNA, 800 bp for dsDNA. Supports asymmetric donor design. Returns HDRFeasibility with all design parameters.
-
-#### core/mosaic/ -- Strategy Generation and Scoring (2 modules)
-
-**generator.py** (`StrategyGenerator`): Takes a list of FeasibilityBundle objects (one per variant) and generates all possible editing strategies. For single-variant cases, generates separate BE, PE, and HDR strategies. For multi-variant cases, additionally generates dual/hybrid strategies (dual BE, dual PE, hybrid BE+PE, hybrid BE+HDR, hybrid PE+HDR, sequential HDR) and evaluates which modality combinations are feasible. Marks infeasible strategies with rejection reasons.
-
-**annotation_integration.py**: Integrates consequence annotations from the coding annotation module into strategy objects. Propagates bystander severity scores, splice proximity flags, and consequence penalties to the strategy layer so the scorer can apply biologically grounded adjustments.
+- `generator.py`: Exhaustive strategy generator (BE, PE, HDR, dual, hybrid)
+- `annotation_integration.py`: Consequence penalties/bonuses with ACMG basis
 
 #### core/pipeline/ -- Orchestrator (1 module)
 
-**strategy_stage.py** (`StrategyPipeline`, `StrategyScorer`): This is the single entry point for the v2 pipeline. Contains two classes:
+- `strategy_stage.py`: Pipeline orchestrator + StrategyScorer + TOPSISScorer + VIKOR + WPM
 
-- `StrategyScorer`: Implements the multi-objective scoring function with 5 components (Safety, Feasibility, Complexity, Risk, Confidence) and consequence-aware adjustments (bystander penalties, splice proximity penalties, clean design bonuses). Ranks strategies by overall score with safety as tiebreaker.
+### 3.3 v3 New Modules and Major Changes
 
-- `StrategyPipeline`: Orchestrates the 8-stage pipeline from raw GenomicVariantInput to ranked ScoredStrategy list. Handles errors gracefully at each stage, falls back to minimal normalization if full annotation is unavailable, and automatically checks both SpCas9 and enFnCas9 for base editing.
+#### NEW: core/sequence/hgvs_parser.py -- HGVS Clinical Notation Parser
 
-#### benchmarks/ -- Evaluation Framework (4 files)
+Accepts variant nomenclature in coding DNA format (e.g., "NM_000267.3:c.910C>T" or "NF1:c.910C>T") and converts to genomic coordinates. Supports substitutions, deletions, insertions, and deletion-insertions. Also handles ClinVar batch files (TSV/VCF).
 
-**dataset_v1.json**: The curated benchmark dataset of 30 variant scenarios with verified GRCh38 coordinates from ClinVar and published editing studies. Each case includes: case_id, gene_symbol, variants (with chromosome, position, ref/alt alleles), category, truth labels (preferred, acceptable, reject), disease context, source PMID, and rationale.
+#### NEW: core/feasibility/off_target.py -- Off-Target Specificity Scoring
 
-**evaluator.py** (`BenchmarkEvaluator`): Runs each benchmark case through the pipeline and evaluates the output against truth labels. Computes top-1 accuracy, top-3 accuracy, and rejection accuracy. Handles pipeline errors gracefully and reports them as failures.
+Implements two complementary off-target frameworks:
+- **CFD score** (Doench et al., Nat Biotechnol, 2016; PMID 26780180): Position-specific mismatch tolerance matrix
+- **MIT score** (Hsu et al., Nat Biotechnol, 2013; PMID 23873081): Alternative position-weight matrix
 
-**run_benchmark.py**: CLI runner for the benchmark. Accepts the dataset JSON as input, executes all cases, writes results to JSON, and prints a summary table. Includes wall-time measurement.
+Uses local sequence enumeration (up to 4 mismatches). NOTE: This is NOT genome-wide off-target search. The CFD/MIT matrices are trained on SpCas9 data; extension to enFnCas9, SpCas9-NG, and SpRY is an extrapolation (Tier B evidence).
 
-**plotting.py**: Generates publication-quality figures: architecture diagram (Fig. 1), feasibility heatmap (Fig. 3), category-level accuracy bar chart (Fig. 5), and overall benchmark summary (Fig. 7). Outputs both PDF and PNG formats.
+#### MAJOR REWRITE: core/pipeline/strategy_stage.py -- TOPSIS 6D Scoring Engine
 
-#### tests/ -- Test Suite (4 files, 93 v2 tests)
+Replaced v2's simple weighted-sum scorer with a comprehensive MCDM framework:
 
-**test_v2_models.py** (259 lines): Tests instantiation, default values, and serialization of all core dataclasses. Verifies enum values and property computations.
+1. **TOPSISScorer**: 6-dimensional TOPSIS (safety, feasibility, complexity, risk, confidence, consequence) with vector normalization, ideal/anti-ideal solution determination, and Euclidean distance-based relative closeness scoring.
 
-**test_feasibility.py** (752 lines): Tests PAM scanning, base editing feasibility, prime editing feasibility, and HDR design feasibility. Includes edge cases: transversions correctly rejected by BE engine, poly-T guides filtered, bystander consequences classified correctly.
+2. **Pareto front analysis**: Identifies non-dominated strategies across all 6 dimensions, independent of weight assignment.
 
-**test_strategy_generation.py** (668 lines): Tests strategy generation for single-variant and multi-variant cases. Verifies that the correct strategy types are generated, infeasible strategies are properly rejected, and scoring produces expected rankings (BE/PE > HDR in iPSC context).
+3. **Monte Carlo sensitivity analysis**: 10,000 Dirichlet-sampled weight permutations (concentration=20, min_alpha=2.0, seed=42) to report rank stability.
 
-**test_conversion_sim.py** (309 lines): Tests the v1 ConversionSim module (30 tests for v1 validation).
+4. **VIKOR**: Compromise ranking using L1 (group utility) and L-infinity (individual regret) distances (Opricovic & Tzeng, 2004).
+
+5. **WPM**: Weighted Product Model using multiplicative (non-compensatory) scoring (Bridgman, 1922; Triantaphyllou, 2000).
+
+6. **cross_method_comparison()**: Runs all three methods on the same decision matrix and reports per-strategy ranks and concordance.
+
+#### CRITICAL BUG FIX: Bystander Triple-Counting
+
+v2 had a scoring bug where bystander severity was counted THREE times:
+- Once in the Risk dimension (`bystander_severity * 0.3`)
+- Once in the consequence penalty (`bystander_severity * 0.08`)
+- Once via the AnnotationIntegrator (per-consequence penalties)
+
+This artificially penalized base editing relative to prime editing and was the root cause of the degenerate "always PE" pattern in v2 (29/30 PE top-ranked). In v3, bystander risk is captured ONLY in the 6th TOPSIS dimension (consequence), and the Risk dimension now captures ONLY structural rearrangement risk. This fix, combined with the multi-nuclease engine, enabled 6/30 cases to properly rank base editing as the top strategy.
+
+#### Multi-Nuclease Base Editing Engine (upgraded base_editing.py)
+
+Systematically evaluates all nuclease-editor combinations with an efficiency modifier matrix:
+
+| Editor | SpCas9 | enFnCas9 | SpCas9-NG | SpRY |
+|--------|--------|----------|-----------|------|
+| ABE8e | 1.0 | 0.8 | 0.7 | 0.5 |
+| BE4max | 1.0 | 0.8 | 0.7 | 0.5 |
+| ABE7.10 | 1.0 | -- | -- | -- |
+
+#### New Test Modules
+
+- `tests/test_hgvs_parser.py`: HGVS parser tests
+- `tests/test_multi_nuclease.py`: Multi-nuclease engine tests
+- `tests/test_off_target.py`: Off-target scoring tests
+- `tests/test_topsis_scorer.py`: TOPSIS, Pareto, VIKOR, WPM tests
+
+#### New Benchmark Files
+
+- `benchmark_results/v3_benchmark_results.json`: v3 benchmark output
+- `benchmark_results/v3_run/v3_multinuclease_results.json`: Multi-nuclease-specific results
+- `benchmark_results/v3_run/v3_comparison_comparison.json`: v2-vs-v3 comparison
+
+#### New Paper Files
+
+- `paper/CRISPRArchitect_v3_manuscript.md`: v3 manuscript
+- `paper/generate_v3_figures.py`: v3 figure generation script
 
 ---
 
 ## 4. Complete File Structure
 
-Below is every file in the project with a one-line description.
+Below is every file in the project. Files **new in v3** are marked with `[v3]`. Files that exist in v2 but were **significantly rewritten** in v3 are marked `[v3-rewrite]`.
 
 ### Root Files
 
 | File | Description |
 |------|-------------|
-| `__init__.py` | Package initializer for the crisprarchitect package |
-| `README.md` | Project overview, installation instructions, and quick start guide |
+| `__init__.py` | [v3-rewrite] Package initializer; version = "3.0.0" |
+| `README.md` | Project overview, installation instructions, quick start guide |
 | `LICENSE` | MIT License text |
 | `requirements.txt` | Python dependencies: numpy, scipy, matplotlib, seaborn, pandas, requests |
 | `pyproject.toml` | Python project metadata and build configuration |
-| `MANIFEST.in` | Specifies files to include in source distribution |
+| `MANIFEST.in` | Files to include in source distribution |
 | `CITATION.cff` | Citation metadata in Citation File Format |
 | `CONTRIBUTING.md` | Contributor guidelines |
 | `RELEASE_NOTES.md` | Version history and release notes |
-| `Dockerfile` | Docker container definition for reproducible deployment |
-| `docker-compose.yml` | Docker Compose configuration for multi-service deployment |
+| `Dockerfile` | Docker container definition |
+| `docker-compose.yml` | Docker Compose configuration |
 | `cli.py` | Command-line interface entry point |
 | `.gitignore` | Git ignore patterns |
 
-### core/ -- v2 Pipeline Modules
+### core/ -- v2/v3 Pipeline Modules
 
 | File | Description |
 |------|-------------|
-| `core/__init__.py` | Package initializer for v2 core modules |
-| `core/models.py` | Central data models: 22 dataclasses and 5 enums shared across the pipeline |
+| `core/__init__.py` | [v3-rewrite] Package initializer; documents v3 additions |
+| `core/models.py` | Central data models: 22+ dataclasses and 5+ enums |
 | `core/sequence/__init__.py` | Package initializer for the sequence layer |
-| `core/sequence/fetcher.py` | Ensembl REST API client for transcript retrieval with retry logic |
-| `core/sequence/transcript_mapper.py` | Genomic-to-transcript coordinate mapper with CDS position resolution |
-| `core/sequence/reference_validator.py` | Reference allele validator against Ensembl genome sequence |
-| `core/sequence/coding_annotation.py` | Coding consequence annotator (synonymous, missense, nonsense, splice) |
-| `core/sequence/variant_normalizer.py` | Full variant normalization orchestrator combining all sequence modules |
+| `core/sequence/fetcher.py` | Ensembl REST API client with retry logic |
+| `core/sequence/transcript_mapper.py` | Genomic-to-transcript coordinate mapper |
+| `core/sequence/reference_validator.py` | Reference allele validator |
+| `core/sequence/coding_annotation.py` | Coding consequence annotator |
+| `core/sequence/variant_normalizer.py` | Full variant normalization orchestrator |
+| `core/sequence/hgvs_parser.py` | [v3] HGVS clinical notation parser + ClinVar batch ingestion |
 | `core/feasibility/__init__.py` | Package initializer for the feasibility layer |
-| `core/feasibility/pam_scan.py` | Enhanced PAM scanner for SpCas9 (NGG) and enFnCas9 (NRG) |
-| `core/feasibility/base_editing.py` | Base editing feasibility engine with ABE/CBE window and bystander analysis |
-| `core/feasibility/prime_editing.py` | Prime editing feasibility engine with pegRNA and PE3 nicking guide design |
-| `core/feasibility/hdr_design.py` | HDR feasibility engine with donor type recommendation and conversion probability |
+| `core/feasibility/pam_scan.py` | [v3-rewrite] Multi-nuclease PAM scanner (SpCas9, enFnCas9, SpCas9-NG, SpRY, Cas12a) |
+| `core/feasibility/base_editing.py` | [v3-rewrite] Multi-nuclease BE engine with 7 editor profiles |
+| `core/feasibility/prime_editing.py` | Prime editing feasibility engine |
+| `core/feasibility/hdr_design.py` | HDR feasibility engine with donor type recommendation |
+| `core/feasibility/off_target.py` | [v3] CFD and MIT off-target specificity scoring |
 | `core/mosaic/__init__.py` | Package initializer for the strategy layer |
-| `core/mosaic/generator.py` | Strategy generator: enumerates BE, PE, HDR, and hybrid strategies |
-| `core/mosaic/annotation_integration.py` | Integrates consequence annotations into strategy objects for scoring |
+| `core/mosaic/generator.py` | Strategy generator with modality priors and evidence-based rationale |
+| `core/mosaic/annotation_integration.py` | Consequence penalties (ACMG-based) |
 | `core/pipeline/__init__.py` | Package initializer for the pipeline |
-| `core/pipeline/strategy_stage.py` | Pipeline orchestrator and multi-objective scoring engine (single entry point) |
+| `core/pipeline/strategy_stage.py` | [v3-rewrite] TOPSIS 6D scorer, Pareto, VIKOR, WPM, sensitivity analysis, pipeline orchestrator |
 
 ### conversion_sim/ -- v1 Gene Conversion Tract Simulator
 
 | File | Description |
 |------|-------------|
-| `conversion_sim/__init__.py` | Package initializer exposing ConversionSimulator |
+| `conversion_sim/__init__.py` | Package initializer |
 | `conversion_sim/models.py` | Data models for simulation parameters and results |
 | `conversion_sim/resection.py` | End resection simulator (MRE11 short-range + EXO1 long-range) |
 | `conversion_sim/filament.py` | RAD51 filament formation model |
-| `conversion_sim/synthesis.py` | DNA synthesis and SDSA displacement simulator |
-| `conversion_sim/simulator.py` | Main simulation orchestrator with Monte Carlo loop |
+| `conversion_sim/synthesis.py` | DNA synthesis and SDSA displacement simulator (geometric distribution) |
+| `conversion_sim/simulator.py` | Main simulation orchestrator with scope restriction to SDSA |
 
 ### mosaic/ -- v1 Strategy Optimizer
 
 | File | Description |
 |------|-------------|
-| `mosaic/__init__.py` | Package initializer exposing MOSAIC classes |
-| `mosaic/gene_structure.py` | Gene structure representation with exon/intron architecture |
-| `mosaic/mutation_classifier.py` | Mutation type classifier (transition, transversion, indel) |
-| `mosaic/strategy_enumerator.py` | Enumerates all feasible multi-locus editing strategies |
-| `mosaic/scorer.py` | Multi-axis strategy scorer (efficiency, safety, time, cost) |
-| `mosaic/reporter.py` | Human-readable report generator with strategy comparisons |
+| `mosaic/__init__.py` | Package initializer |
+| `mosaic/gene_structure.py` | Gene structure representation |
+| `mosaic/mutation_classifier.py` | Mutation type classifier |
+| `mosaic/strategy_enumerator.py` | Strategy enumerator |
+| `mosaic/scorer.py` | Multi-axis strategy scorer (v1: efficiency, safety, time, cost) |
+| `mosaic/reporter.py` | Human-readable report generator |
 
 ### topopred/ -- v1 cssDNA Structure Analyzer
 
 | File | Description |
 |------|-------------|
-| `topopred/__init__.py` | Package initializer exposing TopoPred classes |
-| `topopred/g_quadruplex.py` | G-quadruplex sequence scanner and stability predictor |
-| `topopred/hairpin.py` | Hairpin/stem-loop predictor with nearest-neighbor thermodynamics |
-| `topopred/accessibility.py` | Per-nucleotide accessibility scorer for RAD51 binding |
-| `topopred/optimizer.py` | Donor sequence optimizer suggesting synonymous changes to disrupt structures |
+| `topopred/__init__.py` | Package initializer |
+| `topopred/g_quadruplex.py` | G-quadruplex sequence scanner |
+| `topopred/hairpin.py` | Hairpin/stem-loop predictor |
+| `topopred/accessibility.py` | Per-nucleotide accessibility scorer |
+| `topopred/optimizer.py` | Donor sequence optimizer |
 
 ### chrombridge/ -- v1 3D Chromatin Distance Predictor
 
 | File | Description |
 |------|-------------|
-| `chrombridge/__init__.py` | Package initializer exposing ChromBridge classes |
-| `chrombridge/polymer_model.py` | Gaussian chain polymer model for chromatin |
+| `chrombridge/__init__.py` | Package initializer |
+| `chrombridge/polymer_model.py` | Gaussian chain polymer model |
 | `chrombridge/distance.py` | Genomic-to-physical distance converter |
-| `chrombridge/tad_analysis.py` | Topologically associating domain (TAD) boundary analyzer |
-| `chrombridge/translocation.py` | Translocation risk estimator from 3D proximity |
+| `chrombridge/tad_analysis.py` | TAD boundary analyzer |
+| `chrombridge/translocation.py` | Translocation risk estimator |
 
 ### loopsim/ -- v1 Cohesin Loop Extrusion Simulator
 
 | File | Description |
 |------|-------------|
-| `loopsim/__init__.py` | Package initializer exposing LoopSim classes |
-| `loopsim/chromatin_fiber.py` | Chromatin fiber model with nucleosome positions |
-| `loopsim/cohesin_extruder.py` | Cohesin ring loop extrusion dynamics |
-| `loopsim/homology_search.py` | RAD51-mediated homology search in 3D chromatin context |
-| `loopsim/simulator.py` | Main loop extrusion simulation orchestrator |
-| `loopsim/visualize.py` | Visualization functions for loop extrusion results |
+| `loopsim/__init__.py` | Package initializer |
+| `loopsim/chromatin_fiber.py` | Chromatin fiber model |
+| `loopsim/cohesin_extruder.py` | Cohesin ring dynamics |
+| `loopsim/homology_search.py` | RAD51 homology search in 3D context |
+| `loopsim/simulator.py` | Main loop extrusion simulator |
+| `loopsim/visualize.py` | Visualization functions |
 
 ### utils/ -- Shared Utilities
 
 | File | Description |
 |------|-------------|
-| `utils/__init__.py` | Package initializer for shared utilities |
-| `utils/constants.py` | All biological parameters with literature citations (nuclease PAMs, cell type params, donor multipliers) |
-| `utils/sequence.py` | DNA sequence tools (complement, reverse_complement, PAM finding, GC content) |
-| `utils/plotting.py` | General-purpose visualization functions |
-| `utils/ensembl.py` | Ensembl REST API helper with retry logic and error handling |
+| `utils/__init__.py` | Package initializer |
+| `utils/constants.py` | [v3-rewrite] All biological parameters with [MEASURED]/[DERIVED]/[ASSUMED] tags, multi-nuclease params, editor profiles, efficiency matrix |
+| `utils/sequence.py` | DNA sequence tools |
+| `utils/plotting.py` | Visualization functions |
+| `utils/ensembl.py` | Ensembl REST API helper |
 
 ### benchmarks/ -- Evaluation Framework
 
 | File | Description |
 |------|-------------|
-| `benchmarks/__init__.py` | Package initializer for benchmark modules |
+| `benchmarks/__init__.py` | Package initializer |
 | `benchmarks/dataset_v1.json` | 30 curated ClinVar variant scenarios with truth labels |
-| `benchmarks/evaluator.py` | Benchmark evaluator computing top-1, top-3, and rejection accuracy |
-| `benchmarks/run_benchmark.py` | CLI runner with JSON output and summary table |
-| `benchmarks/plotting.py` | Publication-quality figure generator (Figs. 1, 3, 5, 7) |
+| `benchmarks/literature_benchmark_v1.json` | [v3] v1 MOSAIC 14-paper benchmark dataset |
+| `benchmarks/evaluator.py` | Benchmark evaluator (top-1, top-3, rejection accuracy) |
+| `benchmarks/run_benchmark.py` | CLI runner |
+| `benchmarks/plotting.py` | Publication-quality figure generator |
 
 ### benchmark_results/ -- Stored Results
 
 | File | Description |
 |------|-------------|
-| `benchmark_results/definitive_benchmark_results.json` | Full results: 30 cases, per-case outcomes, accuracy metrics |
-| `benchmark_results/consequence_shift_analysis.json` | Consequence-aware vs naive scoring comparison (0% shift rate) |
-| `benchmark_results/figures/fig1_architecture.png` | Pipeline architecture diagram |
-| `benchmark_results/figures/fig1_architecture.pdf` | Pipeline architecture diagram (vector) |
-| `benchmark_results/figures/fig3_feasibility_heatmap.png` | Feasibility heatmap across modalities and cases |
-| `benchmark_results/figures/fig3_feasibility_heatmap.pdf` | Feasibility heatmap (vector) |
-| `benchmark_results/figures/fig5_category_accuracy.png` | Per-category accuracy bar chart |
-| `benchmark_results/figures/fig5_category_accuracy.pdf` | Per-category accuracy (vector) |
-| `benchmark_results/figures/fig7_benchmark_summary.png` | Overall benchmark summary panel |
-| `benchmark_results/figures/fig7_benchmark_summary.pdf` | Overall benchmark summary (vector) |
+| `benchmark_results/definitive_benchmark_results.json` | v2 benchmark: 30 cases |
+| `benchmark_results/consequence_shift_analysis.json` | v2 consequence-shift comparison |
+| `benchmark_results/v3_benchmark_results.json` | [v3] v3 benchmark results |
+| `benchmark_results/v3_run/v3_multinuclease_results.json` | [v3] Multi-nuclease results |
+| `benchmark_results/v3_run/v3_comparison_comparison.json` | [v3] v2-vs-v3 comparison |
 
 ### tests/ -- Test Suite
 
 | File | Description |
 |------|-------------|
-| `tests/__init__.py` | Package initializer for test modules |
-| `tests/test_conversion_sim.py` | 30 tests for v1 ConversionSim module validation |
-| `tests/test_v2_models.py` | Tests for all core dataclass instantiation and serialization |
-| `tests/test_feasibility.py` | Tests for PAM scanning, BE/PE/HDR feasibility engines |
-| `tests/test_strategy_generation.py` | Tests for strategy generation, scoring, and ranking |
+| `tests/__init__.py` | Package initializer |
+| `tests/test_conversion_sim.py` | 30 tests for v1 ConversionSim |
+| `tests/test_v2_models.py` | Core dataclass tests |
+| `tests/test_feasibility.py` | PAM scanning, BE/PE/HDR engine tests |
+| `tests/test_strategy_generation.py` | Strategy generation and scoring tests |
+| `tests/test_hgvs_parser.py` | [v3] HGVS parser tests |
+| `tests/test_multi_nuclease.py` | [v3] Multi-nuclease engine tests |
+| `tests/test_off_target.py` | [v3] Off-target scoring tests |
+| `tests/test_topsis_scorer.py` | [v3] TOPSIS, Pareto, VIKOR, WPM tests |
 
-### webapp/ -- Streamlit Interactive Interface
-
-| File | Description |
-|------|-------------|
-| `webapp/app.py` | Main Streamlit application for v1 module interfaces |
-| `webapp/app_v2_page.py` | v2 pipeline interface page with variant input and strategy display |
-| `webapp/style.py` | Custom CSS and styling for the web interface |
-| `webapp/run.sh` | Bash script to launch the Streamlit application |
-| `webapp/requirements.txt` | Web app-specific dependencies (streamlit) |
-
-### validation/ -- v1 Validation Reports and Scripts
+### webapp/ -- Streamlit Interface
 
 | File | Description |
 |------|-------------|
-| `validation/VALIDATION_REPORT.md` | ConversionSim validation against 4 published datasets |
-| `validation/MOSAIC_BENCHMARK_REPORT.md` | MOSAIC benchmark against 14 published papers |
-| `validation/validate_conversionsim.py` | Script to reproduce ConversionSim validation |
-| `validation/benchmark_mosaic.py` | Script to reproduce MOSAIC benchmark |
-| `validation/figures/validation1_tract_distribution.png` | Tract length distribution plot |
-| `validation/figures/validation2_distance_incorporation.png` | Distance-dependent incorporation plot |
-| `validation/figures/validation3_cssdna_vs_lssdna.png` | cssDNA vs lssDNA comparison plot |
-| `validation/figures/validation4_staggered_enhancement.png` | Staggered cut enhancement plot |
+| `webapp/app.py` | Main Streamlit application |
+| `webapp/app_v2_page.py` | v2 pipeline interface page |
+| `webapp/style.py` | Custom CSS styling |
+| `webapp/run.sh` | Launch script |
+| `webapp/requirements.txt` | Web app dependencies |
 
-### paper/ -- Manuscript and Figures
+### validation/ -- Validation Reports
 
 | File | Description |
 |------|-------------|
-| `paper/CRISPRArchitect_v2_manuscript.md` | Full manuscript text (Markdown source) |
-| `paper/CRISPRArchitect_PLOS_manuscript.docx` | PLOS Computational Biology formatted manuscript |
-| `paper/CRISPRArchitect_PLOS_manuscript_with_figures.docx` | Manuscript with embedded figures |
-| `paper/CRISPRArchitect_Supplementary.docx` | Supplementary materials |
-| `paper/CRISPRArchitect_Cover_Letter.docx` | Cover letter for journal submission |
-| `paper/cover_letter.md` | Cover letter (Markdown source) |
-| `paper/cover_letter_v2_nature_methods.md` | Cover letter variant for Nature Methods |
-| `paper/PLOS_CompBio_manuscript.md` | PLOS-formatted manuscript (Markdown) |
-| `paper/manuscript_draft.md` | Earlier manuscript draft |
-| `paper/supplementary_materials.md` | Supplementary materials (Markdown) |
-| `paper/REFERENCE_VERIFICATION.md` | Verification log for all cited references |
-| `paper/CRISPRArchitect_v2_presentation.md` | Presentation script (Markdown) |
-| `paper/CRISPRArchitect_v2_LabMeeting.pptx` | Lab meeting PowerPoint presentation |
-| `paper/generate_figures.py` | Script to generate all manuscript figures |
-| `paper/generate_presentation_v2.py` | Script to generate presentation slides |
-| `paper/figures/Fig1_ConversionSim.png` | Figure 1: ConversionSim overview |
-| `paper/figures/Fig1_ConversionSim.pdf` | Figure 1 (vector) |
-| `paper/figures/Fig1.tif` | Figure 1 (TIFF for journal) |
-| `paper/figures/Fig2_Validation.png` | Figure 2: Validation results |
-| `paper/figures/Fig2_Validation.pdf` | Figure 2 (vector) |
-| `paper/figures/Fig2.tif` | Figure 2 (TIFF for journal) |
-| `paper/figures/Fig3_MOSAIC_Benchmark.png` | Figure 3: MOSAIC benchmark |
-| `paper/figures/Fig3_MOSAIC_Benchmark.pdf` | Figure 3 (vector) |
-| `paper/figures/Fig3.tif` | Figure 3 (TIFF for journal) |
-| `paper/figures/FigS1_Sensitivity.png` | Supplementary Figure 1: Parameter sensitivity |
-| `paper/figures/FigS1_Sensitivity.pdf` | Supplementary Figure 1 (vector) |
-| `paper/figures/FigS1.tif` | Supplementary Figure 1 (TIFF) |
-| `paper/figures/FigS2_Weight_Sensitivity.png` | Supplementary Figure 2: Scoring weight sensitivity |
-| `paper/figures/FigS2_Weight_Sensitivity.pdf` | Supplementary Figure 2 (vector) |
-| `paper/figures/FigS2.tif` | Supplementary Figure 2 (TIFF) |
+| `validation/VALIDATION_REPORT.md` | ConversionSim validation (4 datasets, with scope restriction) |
+| `validation/MOSAIC_BENCHMARK_REPORT.md` | MOSAIC benchmark (14 papers) |
+| `validation/validate_conversionsim.py` | Validation reproduction script |
+| `validation/benchmark_mosaic.py` | MOSAIC benchmark reproduction script |
+
+### paper/ -- Manuscripts and Figures
+
+| File | Description |
+|------|-------------|
+| `paper/CRISPRArchitect_v2_manuscript.md` | v2 manuscript (Markdown) |
+| `paper/CRISPRArchitect_v3_manuscript.md` | [v3] v3 manuscript (Markdown) |
+| `paper/REFERENCE_VERIFICATION.md` | [v3-rewrite] Web-search verified reference log (20 refs, 3 corrected) |
+| `paper/generate_v3_figures.py` | [v3] v3 figure generation script |
+| `paper/generate_presentation_v2.py` | v2 presentation script |
+| `paper/supplementary_materials.md` | Supplementary materials |
+| `paper/cover_letter_v2_nature_methods.md` | Cover letter |
 
 ### docs/ -- Documentation
 
 | File | Description |
 |------|-------------|
-| `docs/ARCHITECTURE.md` | System architecture and design document with biological explanations |
-| `docs/HONEST_ASSESSMENT.md` | Candid assessment of project strengths and weaknesses |
-| `docs/LIVE_DEMO_SCRIPT.md` | Step-by-step script for live demonstrations |
-| `docs/PRESENTATION_GUIDE.md` | Guide for presenting CRISPRArchitect at conferences |
-| `docs/ROADMAP.md` | Development roadmap and planned features |
-| `docs/SESSION_CONTEXT.md` | Development session context and notes |
-| `docs/USER_GUIDE.md` | User guide for running the pipeline |
-
-### examples/ -- Example Scripts
-
-| File | Description |
-|------|-------------|
-| `examples/fetch_real_genes.py` | Example: fetching real gene structures from Ensembl |
-| `examples/your_scenario_analysis.py` | Template for analyzing your own editing scenario |
-
-### Configuration Files
-
-| File | Description |
-|------|-------------|
-| `.github/workflows/ci.yml` | GitHub Actions CI/CD workflow for automated testing |
-| `.streamlit/config.toml` | Streamlit configuration for the web app |
+| `docs/COMPLETE_PROJECT_DOCUMENTATION.md` | THIS DOCUMENT |
+| `docs/USER_GUIDE.md` | User guide |
+| `docs/DATA_REQUEST_FOR_PI.md` | Data request template |
+| `docs/LAB_MEETING_SPEAKER_GUIDE.md` | Lab meeting presentation guide |
+| `docs/NEXT_SESSION_CONTEXT.md` | Development session context |
 
 ---
 
 ## 5. Data Flow (End-to-End)
 
-This section walks through exactly what happens when a user inputs a variant such as "NF1 c.910C>T" into CRISPRArchitect, from the raw input to the final ranked strategy list.
+This section walks through exactly what happens when a user inputs a variant into CRISPRArchitect v3, from raw input to ranked strategy list with sensitivity analysis.
 
-### Step 1: GenomicVariantInput Created
+### Stage 1: Variant Input (3 input formats)
 
-The user creates a `GenomicVariantInput` object specifying the variant in GRCh38 coordinates:
+v3 accepts three input formats:
+1. **Genomic coordinates**: `GenomicVariantInput(chromosome="17", position=31200443, ref_allele="C", alt_allele="T", gene_symbol="NF1")`
+2. **HGVS notation**: `"NM_000267.3:c.910C>T"` or `"NF1:c.910C>T"` (parsed by `hgvs_parser.py`)
+3. **ClinVar batch**: TSV or VCF file with chromosome, position, ref, alt, gene symbol
 
-```python
-variant = GenomicVariantInput(
-    chromosome="17",
-    position=31200443,
-    ref_allele="C",
-    alt_allele="T",
-    gene_symbol="NF1",
-    name="c.910C>T",
-)
-```
+### Stage 2: Transcript Fetch (Ensembl API)
 
-All coordinates are 1-based (Ensembl convention). The gene_symbol is required for transcript lookup. The name field is optional but improves readability in output reports.
+The `TranscriptFetcher` calls the Ensembl REST API to retrieve the canonical transcript. Returns `TranscriptInfo` with transcript ID, exon structure, strand, chromosome. Retry logic: 3 retries with 1/2/4 second exponential backoff for HTTP 500/502/503/504.
 
-### Step 2: TranscriptFetcher Calls Ensembl
+### Stage 3: Coordinate Mapping
 
-The `TranscriptFetcher` makes an HTTP request to the Ensembl REST API (`https://rest.ensembl.org/lookup/symbol/homo_sapiens/NF1?expand=1`). It retrieves:
+`TranscriptMapper` maps the genomic position to transcript context: exon number, CDS position, codon index, codon position (1st/2nd/3rd), distance to exon boundaries.
 
-- Canonical transcript ID (e.g., ENST00000358273)
-- Gene ID (e.g., ENSG00000196712)
-- Chromosome, start, end positions
-- Strand (-1 for NF1, which is on the reverse strand)
-- Complete exon list with coordinates
+### Stage 4: Reference Validation
 
-Output: a `TranscriptInfo` object containing the full exon structure.
+`ReferenceValidator` fetches genomic sequence from Ensembl and confirms the user's ref allele matches. Handles reverse-strand genes by reverse-complementing.
 
-If the API call fails (HTTP 500, 502, 503, 504, or network timeout), automatic retry logic kicks in: up to 3 retries with exponential backoff (waits of 1, 2, and 4 seconds).
+### Stage 5: Coding Annotation
 
-### Step 3: TranscriptMapper Maps Position
+`CodingAnnotator` translates reference and alternate codons, classifies as synonymous/missense/nonsense/frameshift/splice-proximal. Splice proximity follows ACMG standards: <=2 bp = splice donor/acceptor, 3-8 bp = splice region.
 
-The `TranscriptMapper` receives the genomic position (31200443) and the TranscriptInfo object. It:
+### Stage 6: Multi-Nuclease PAM Scanning
 
-1. Iterates through exons (in transcript order, accounting for strand) to find which exon contains the position
-2. Calculates the transcript position (position within the spliced exonic sequence)
-3. Calculates the CDS position (position within the coding sequence, adjusting for the start codon)
-4. Determines codon_index (which codon number) and codon_position (1st, 2nd, or 3rd position within the codon)
-5. Extracts the reference codon and looks up the reference amino acid
-6. Calculates distance to both exon boundaries (distance_to_exon_start and distance_to_exon_end) for splice proximity annotation
+`EnhancedPAMScanner` scans both strands of a +-200 bp genomic window for PAM sequences across ALL supported nucleases (SpCas9 NGG, enFnCas9 NRG, SpCas9-NG NG, SpRY NNN, Cas12a TTTV). For each PAM, extracts 20-nt protospacer, calculates cut position, GC content, poly-T check.
 
-Output: a `TranscriptCoordinate` object.
+### Stage 7: Multi-Modality Feasibility Assessment
 
-### Step 4: ReferenceValidator Checks Ref Allele
+**Base Editing**: For each nuclease-editor combination, checks (a) mutation type compatibility (ABE: A>G, CBE: C>T), (b) target within editing window, (c) bystander identification and consequence classification. Returns best result across all combinations.
 
-The `ReferenceValidator` fetches a window of genomic sequence centered on position 31200443 from the Ensembl sequence API (`/sequence/region/homo_sapiens/17:31200343..31200543:1`). It then:
+**Prime Editing**: Designs pegRNA (PBS default 13 nt, RT template 10-30 nt), searches for PE3 nicking guide 40-100 bp away.
 
-1. Extracts the nucleotide at the exact position
-2. For reverse-strand genes like NF1, takes the complement (because the user specifies the ref allele on the coding strand, but Ensembl returns the forward strand)
-3. Compares the expected reference allele against the user-provided "C"
+**HDR**: Calculates cut-to-edit distance, applies exponential decay scoring, recommends donor type and homology arm lengths.
 
-If they match, the variant passes validation. If not, the variant is flagged and excluded from downstream analysis.
+**Off-Target Scoring** [v3]: Computes CFD and MIT specificity scores for each candidate guide.
 
-Output: a `ReferenceValidation` object with `is_valid=True` and a message confirming the match.
+Output: `FeasibilityBundle` per variant containing all modality results.
 
-### Step 5: CodingAnnotator Determines Consequence
+### Stage 8: Strategy Generation
 
-The `CodingAnnotator` uses the TranscriptCoordinate to:
+`StrategyGenerator` produces all biologically plausible strategies:
+- Single-variant: Single BE, Single PE, Single HDR
+- Multi-variant: Dual BE, Dual PE, Sequential HDR, Hybrid BE+HDR, Hybrid PE+HDR, Hybrid BE+PE
+- Rejected strategies are tagged with reasons (not silently omitted)
 
-1. Construct the reference codon from the CDS position and codon_position
-2. Construct the alternate codon by substituting the alternate allele at the appropriate position
-3. Translate both codons using the standard genetic code
-4. Compare the amino acids to classify the consequence:
-   - Same amino acid: synonymous
-   - Different amino acid: missense
-   - Stop codon introduced: nonsense
-   - Insertion/deletion not divisible by 3: frameshift
-5. Check splice proximity: distance_to_exon_start or distance_to_exon_end <=2 bp = splice_donor/splice_acceptor; 3-8 bp = splice_region
+### Stage 9: 6-Dimensional TOPSIS Scoring [v3]
 
-For NF1 c.910C>T, the consequence is p.Arg304Ter (nonsense -- a premature stop codon is introduced).
+The `TOPSISScorer` constructs a 6D decision matrix for each strategy:
 
-Output: a `CodingAnnotation` object.
+| Dimension | Type | Computation |
+|-----------|------|-------------|
+| Safety | Benefit (higher=better) | 1.0 (no DSB), 0.5 (1 DSB), 0.1-0.3 (2+ DSBs) |
+| Feasibility | Benefit | modality_prior * donor_feasibility |
+| Complexity | Cost (lower=better) | rounds + donors + guides + screening penalties |
+| Risk | Cost | Rearrangement risk ONLY (bystander moved to consequence dim) |
+| Confidence | Benefit | Evidence tier: A=1.0, B=0.7, C=0.4 |
+| Consequence | Benefit | 1.0 - penalty + bonus (bystander, splice, clean edit) |
 
-### Step 6: VariantNormalizer Produces NormalizedVariant
+TOPSIS algorithm:
+1. Vector-normalize each column
+2. Apply weights (default: 0.30/0.25/0.20/0.15/0.10/0.08, normalized)
+3. Determine ideal (A+) and anti-ideal (A-) solutions
+4. Compute Euclidean distances to A+ and A-
+5. Calculate relative closeness: C = D- / (D+ + D-)
 
-The `VariantNormalizer` also fetches the local genomic sequence (+-200 bp flanking the variant position) and identifies the edit index within this local sequence. This local sequence is needed for PAM scanning and feasibility assessment.
+### Stage 10: Pareto Front Analysis [v3]
 
-Output: a `NormalizedVariant` object that bundles together: the original GenomicVariantInput, TranscriptInfo, TranscriptCoordinate, CodingAnnotation, ReferenceValidation, local_sequence, and local_seq_edit_index.
+Identifies non-dominated strategies across all 6 dimensions. A strategy is Pareto-dominated if another is at least as good on ALL dimensions and strictly better on at least one. This analysis is weight-independent.
 
-### Step 7: PAM Scanner Finds Guides
+### Stage 11: Sensitivity Analysis [v3]
 
-The `EnhancedPAMScanner` takes the 401-bp local sequence and scans both strands for PAM sequences:
+10,000 Dirichlet-sampled weight vectors (concentration=20, min_alpha=2.0, seed=42). For each vector, re-run TOPSIS and record ranks. Output per strategy: rank stability (fraction top-ranked), mean rank, full rank distribution. Standard errors computed as SE = sqrt(p*(1-p)/n) for the binomial proportion.
 
-- **SpCas9 (NGG)**: Scans for any two-base sequence followed by GG on the forward strand, or CC followed by any two bases on the reverse strand
-- **enFnCas9 (NRG)**: Scans for any nucleotide, then A or G, then G (forward strand) -- broader recognition
+### Stage 12: PipelineResult Returned
 
-For each PAM found, the scanner:
-1. Extracts the 20-nt protospacer upstream of the PAM
-2. Calculates the cut position (3 bp upstream of the PAM on the protospacer strand)
-3. Computes distance from cut to the edit position
-4. Calculates GC content (accepted range: 30-70%)
-5. Checks for poly-T (>=4 consecutive T's -- rejected)
-6. Computes a composite ranking score
-
-Output: a list of `GuideCandidate` objects, sorted by score.
-
-### Step 8: BE/PE/HDR Engines Evaluate Feasibility
-
-Each feasibility engine receives the NormalizedVariant, local sequence, and edit index:
-
-**Base Editing Engine**:
-1. Determines if C>T correction requires CBE or T>C requires ABE (or the reverse). For NF1 c.910C>T, correction is T>C, which is ABE-compatible.
-2. For each guide candidate, checks if the target base falls within the ABE window (positions 4-7) or CBE window (positions 4-8)
-3. If a window-compatible guide exists, scans for bystander A's (ABE) or C's (CBE) within the window
-4. Classifies each bystander's coding consequence
-5. Returns BaseEditingFeasibility with label (FEASIBLE, MARGINAL, or NOT_FEASIBLE)
-
-**Prime Editing Engine**:
-1. For each guide near the edit, designs pegRNA parameters: PBS length (default 13 nt), RT template length (15 nt)
-2. Searches for PE3 nicking guide on opposite strand, 40-100 bp away
-3. Checks that the edit is within PE range (substitution, insertion <=40 bp, deletion <=80 bp)
-4. Returns PrimeEditingFeasibility
-
-**HDR Design Engine**:
-1. For each guide, calculates cut-to-edit distance
-2. Scores incorporation probability using exponential decay (half-life ~20 bp)
-3. Recommends donor type: ssODN if <=30 bp, cssDNA if <=5,000 bp
-4. Estimates required homology arm lengths
-5. Returns HDRFeasibility
-
-Output: a `FeasibilityBundle` containing results from all three engines.
-
-### Step 9: StrategyGenerator Produces Strategies
-
-The `StrategyGenerator` receives the list of FeasibilityBundle objects (one per variant) and generates all feasible strategies:
-
-For a single variant:
-- **Single-step Base Editing** (if BE is feasible): One ABE or CBE guide, no DSB, no donor
-- **Single-step Prime Editing** (if PE is feasible): One pegRNA + PE3 nick, no DSB, no donor
-- **Single-step HDR** (if HDR is feasible): One guide + one donor template, one DSB
-
-For multiple variants, additional strategies are generated:
-- **Dual Base Editing**: Both variants corrected by BE (if both are BE-feasible)
-- **Dual Prime Editing**: Both variants corrected by PE
-- **Hybrid BE+PE**, **Hybrid BE+HDR**, **Hybrid PE+HDR**: Mixed modality strategies
-- **Sequential HDR**: Edit one site, clone, validate, edit the other
-
-Strategies that fail hard constraints (e.g., two simultaneous DSBs with p53 active) are marked with rejection reasons.
-
-Output: `List[Strategy]` including both viable and rejected strategies.
-
-### Step 10: StrategyScorer Ranks Strategies
-
-The `StrategyScorer` applies the multi-objective scoring function to each non-rejected strategy:
-
-```
-Score = w1*Safety + w2*Feasibility - w3*Complexity - w4*Risk + w5*Confidence
-       - consequence_penalty + consequence_bonus
-```
-
-Where w1=0.30, w2=0.25, w3=0.20, w4=0.15, w5=0.10 (iPSC defaults).
-
-Each component is computed as described in Section 6.
-
-Strategies are sorted by overall score (descending), with safety score as tiebreaker. Each strategy is assigned a rank (1 = best).
-
-Output: `List[ScoredStrategy]` sorted by rank.
-
-### Step 11: PipelineResult Returned
-
-The pipeline assembles everything into a `PipelineResult` object containing:
-
-- `transcript`: The TranscriptInfo object
-- `variants`: List of NormalizedVariant objects
-- `bundles`: List of FeasibilityBundle objects
-- `strategies`: List of ScoredStrategy objects (ranked, best first)
-- `rejected_strategies`: List of Strategy objects that were rejected
-- `metadata`: Pipeline execution metadata (cell type, nuclease, counts)
-- `warnings`: Any warnings generated during execution
-
-The caller can access the top strategy via `result.top_strategy`, iterate over all ranked strategies, or inspect rejected strategies to understand why they were excluded.
+Assembles: transcript, variants, feasibility bundles, ranked strategies (with TOPSIS scores, Pareto flags, sensitivity results), rejected strategies, warnings, metadata.
 
 ---
 
 ## 6. Scoring System (Detailed)
 
-### 6.1 The Multi-Objective Scoring Equation
+### 6.1 The v3 TOPSIS 6-Dimensional Framework
 
-The overall score for each strategy is computed as:
+v3 replaced v2's simple weighted sum with TOPSIS (Technique for Order Preference by Similarity to Ideal Solution; Hwang & Yoon, 1981). TOPSIS ranks alternatives based on their geometric distance to the ideal and anti-ideal solutions in normalized, weighted decision space.
 
+The six dimensions are:
+- **Benefit dimensions** (higher = better): Safety (dim 0), Feasibility (dim 1), Confidence (dim 4), Consequence (dim 5)
+- **Cost dimensions** (lower = better): Complexity (dim 2), Risk (dim 3)
+
+### 6.2 The Bystander Triple-Counting Bug and Its Fix
+
+**The bug (v2)**: In v2, bystander severity was counted three separate times in the scoring:
+1. In the Risk dimension: `risk += bystander_severity * 0.3`
+2. In the consequence penalty: `penalty += bystander_severity * 0.08`
+3. Via the AnnotationIntegrator: per-consequence penalties (-0.10/missense, -0.25/nonsense)
+
+This caused base editing strategies to receive ~3x the intended bystander penalty, making them unable to compete with prime editing even when BE was clearly the better biological choice. This was the root cause of the degenerate "always PE" pattern in v2 (29/30 PE, 0/30 BE).
+
+**The fix (v3)**: Bystander risk is captured ONLY in the 6th TOPSIS dimension (consequence). The Risk dimension now captures ONLY structural rearrangement/translocation risk. The code comment in `_score_risk()` explicitly documents this:
+
+```python
+# NOTE: bystander_severity is NO LONGER included here.
+# It is captured in the consequence dimension (6th TOPSIS dim).
 ```
-Score = w1 * S_safety + w2 * S_feasibility - w3 * S_complexity - w4 * S_risk + w5 * S_confidence
-        - consequence_penalty + consequence_bonus
-```
 
-The score is clamped to the range [0.0, 1.0].
-
-**Default weights** (optimized for iPSC applications):
-
-| Component | Symbol | Weight | Rationale |
-|-----------|--------|--------|-----------|
-| Safety | w1 | 0.30 | Highest weight because iPSCs have active p53; DSBs are toxic and select for p53-null clones |
-| Feasibility | w2 | 0.25 | PAM availability and editing window compatibility are hard constraints |
-| Complexity | w3 | 0.20 | Fewer rounds, donors, and screening colonies improve practical success |
-| Risk | w4 | 0.15 | Rearrangement risk and bystander consequences affect biological outcome |
-| Confidence | w5 | 0.10 | Evidence tier reflects design quality and literature support |
-
-Note: Complexity and Risk are subtracted (they are penalties), while Safety, Feasibility, and Confidence are added (they are rewards). The weights are normalized to sum to 1.0 internally.
-
-### 6.2 How Each Component Is Computed
+### 6.3 Dimension Scoring Details
 
 #### Safety Score (0-1, higher is better)
 
-DSB-free strategies are safest for iPSCs:
-
 | Condition | Score | Biological Justification |
 |-----------|-------|-------------------------|
-| 0 DSBs (BE, PE) | 1.0 | No DSB means no p53 activation, no karyotype risk |
-| 1 DSB, sequential, p53 active | 0.5 | Single DSB triggers p53 apoptosis (Ihry 2018) but no translocation risk |
+| 0 DSBs (BE, PE) | 1.0 | No p53 activation, no karyotype risk |
+| 1 DSB, sequential, p53 active | 0.5 | ~45% cell death (Ihry 2018 Fig 2), p53 penalty -0.1 |
 | 1 DSB, sequential, p53 inactive | 0.6 | Less toxicity in p53-null cells |
-| 2+ DSBs, simultaneous, p53 active | 0.1 | Dual DSBs risk translocation + severe p53 selection (Leibowitz 2021) |
+| 2+ DSBs, simultaneous, p53 active | 0.1 | Translocation risk + severe p53 selection |
 | 2+ DSBs, simultaneous, p53 inactive | 0.2 | Translocation risk without p53 selection |
 
-#### Feasibility Score (0-1, higher is better)
+#### Feasibility Score (0-1)
 
-Product of two factors:
-- `modality_prior_score`: Base confidence in the modality's ability to achieve the edit. PE = ~0.85, BE = ~0.90 (when feasible), HDR = ~0.72.
-- `donor_feasibility_score`: Quality of the donor design (1.0 for no-donor strategies, discounted for large or complex donors).
+Product of modality_prior_score and donor_feasibility_score.
 
-Feasibility = modality_prior_score * donor_feasibility_score
+Modality priors with evidence-based rationale (from `generator.py`):
 
-#### Complexity Score (0-1, higher is worse -- penalizes complex designs)
+| Modality | FEASIBLE prior | MARGINAL prior | Evidence |
+|----------|---------------|----------------|----------|
+| Single BE | 0.95 | 0.80 | BE achieves 30-70% in iPSCs; near-maximum when PAM+window verified |
+| Single PE | 0.82 | 0.68 | PE achieves 5-50% depending on locus; universal mutation-type compatibility |
+| Single HDR | 0.72 | 0.60 | HDR achieves 5-15% in iPSCs (unenhanced); DSB requirement |
+| Dual BE | 0.92 | 0.78 | Two independent BE operations, slightly lower |
+| Dual PE | 0.84 | 0.70 | Two pegRNAs, moderate complexity |
+| Sequential HDR | 0.68 | 0.56 | Two rounds, each with DSB risk |
+| Hybrid BE+HDR | 0.80 | 0.66 | One DSB-free + one DSB operation |
+| Hybrid PE+HDR | 0.76 | 0.63 | Similar but PE less efficient than BE |
 
-Weighted combination of four penalty terms:
+#### Complexity Score (0-1, higher = more complex = worse)
 
 ```
 Complexity = 0.35 * rounds_penalty + 0.25 * donor_penalty + 0.20 * guide_penalty + 0.20 * screening_penalty
 ```
 
 Where:
-- `rounds_penalty` = min(1.0, (num_rounds - 1) * 0.3). Single-round strategies get 0; two-round strategies get 0.3.
-- `donor_penalty` = min(1.0, num_donors * 0.15). No-donor strategies (BE, PE) get 0; one-donor HDR gets 0.15.
-- `guide_penalty` = min(1.0, (num_distinct_guides - 1) * 0.1). Single-guide strategies get 0.
-- `screening_penalty` = min(1.0, screening_clones / 100.0). 12 clones = 0.12; 48 clones = 0.48.
+- `rounds_penalty` = min(1.0, (num_rounds - 1) * 0.3)
+- `donor_penalty` = min(1.0, num_donors * 0.15)
+- `guide_penalty` = min(1.0, (num_distinct_guides - 1) * 0.1)
+- `screening_penalty` = min(1.0, screening_clones / 100.0)
 
-#### Risk Score (0-1, higher is worse -- penalizes risky designs)
+#### Risk Score (0-1, higher = riskier = worse) [v3 CHANGED]
 
-Two components:
+**v3 change**: Risk now captures ONLY structural rearrangement risk. Bystander severity has been moved to the consequence dimension.
 
 ```
-Risk = rearrangement_risk_score + bystander_severity * 0.3
+Risk = rearrangement_risk_score
 ```
 
-Where rearrangement_risk_score maps from the RiskLevel enum:
-- LOW: 0.0
-- MODERATE: 0.3
-- HIGH: 0.6
-- VERY_HIGH: 0.9
+Where rearrangement_risk_score maps: LOW=0.0, MODERATE=0.3, HIGH=0.6, VERY_HIGH=0.9.
 
-And bystander_severity (0-1) reflects the worst-case bystander consequence within the editing window.
-
-#### Confidence Score (0-1, higher is better)
-
-Maps from the EvidenceTier enum:
+#### Confidence Score (0-1)
 
 | Tier | Score | Meaning |
 |------|-------|---------|
-| A | 1.0 | All components PAM-verified, editing window confirmed |
-| B | 0.7 | Feasible but with caveats (bystanders, large donor) |
-| C | 0.4 | Theoretical only (no PAM found, extrapolated efficiency) |
+| A | 1.0 | PAM-verified, editing window confirmed, direct experimental support |
+| B | 0.7 | Feasible with caveats (inferred editor-nuclease combinations) |
+| C | 0.4 | Theoretical only (no PAM found, extrapolated) |
 
-### 6.3 Consequence Penalties and Bonuses
+#### Consequence Score (0-1, higher = cleaner = better) [v3 NEW]
 
-Consequence-aware adjustments are applied after the main scoring equation:
-
-#### Penalties (subtracted from score)
-
-| Condition | Penalty | Biological Justification |
-|-----------|---------|-------------------------|
-| Bystander edit creating a missense change | -0.10 per position | Missense bystanders may alter protein function unpredictably |
-| Bystander edit creating a nonsense change | -0.25 per position | Nonsense bystanders create premature stop codons; devastating for protein function |
-| Variant within splice donor/acceptor (<=2 bp from exon boundary) | -0.15 | Splice site disruption typically causes exon skipping or intron retention |
-| Variant within splice region (3-8 bp from exon boundary) | -0.08 | Splice region variants have moderate risk of affecting splicing |
-| DSB burden: >=2 simultaneous DSBs with p53 active | -0.10 | Elevated risk of p53-mediated selection and chromosomal rearrangement |
-
-The total consequence penalty is capped at 0.30 to prevent a single bad bystander from completely zeroing out an otherwise good strategy.
-
-#### Bonuses (added to score)
-
-| Condition | Bonus | Biological Justification |
-|-----------|-------|-------------------------|
-| All bystander edits are synonymous | +0.05 | Synonymous bystanders do not affect protein sequence; clean design |
-| No DSBs AND no bystander risk | +0.03 | Cleanest possible design; maximally safe |
-
-The total consequence bonus is capped at 0.10.
-
-### 6.4 Why Safety Gets the Highest Weight for iPSC Work
-
-The weight distribution is not arbitrary. It reflects a specific prioritization for iPSC-based disease modeling and therapeutic development:
-
-1. **Patient safety**: iPSC-derived cells may eventually be transplanted into patients. Karyotypic abnormalities or p53 mutations acquired during editing could lead to tumorigenesis.
-2. **Data integrity**: iPSC disease models are used to study gene function. If surviving clones are enriched for p53 mutations, the observed phenotype may reflect p53 loss rather than the intended correction.
-3. **Regulatory requirements**: Clinical-grade iPSC products require extensive karyotype and whole-genome sequencing quality control. DSB-based approaches create more QC burden.
-
-For other cell types (e.g., HEK293T, which has inactive p53), the weights can be adjusted to reduce safety emphasis and increase efficiency emphasis.
-
-### 6.5 Example Calculation: BE vs PE vs HDR for a Specific Case
-
-Consider a ClinVar variant that is a G>A transition in a coding exon, 50 bp from the nearest exon boundary. Suppose PAM scanning finds:
-- An ABE-compatible guide that places the target A at position 5 (within window), with one bystander A at position 6 (predicted synonymous)
-- A PE-compatible guide with a PE3 nicking guide 60 bp away
-- An HDR-compatible guide with cut-to-edit distance of 8 bp
-
-**Base Editing (ABE)**:
 ```
-Safety = 1.0 (no DSB)
-Feasibility = 0.90 * 1.0 = 0.90
-Complexity = 0.35*0 + 0.25*0 + 0.20*0 + 0.20*0.12 = 0.024
-Risk = 0.0 + 0.1*0.3 = 0.03 (one synonymous bystander, low severity)
-Confidence = 1.0 (Tier A, PAM-verified)
-
-Base score = 0.30*1.0 + 0.25*0.90 - 0.20*0.024 - 0.15*0.03 + 0.10*1.0
-           = 0.300 + 0.225 - 0.005 - 0.005 + 0.100 = 0.615
-Consequence bonus = +0.05 (all bystanders synonymous) + 0.03 (no DSB, clean) = +0.08
-Final = 0.615 + 0.08 = 0.695
+consequence_score = max(0.0, min(1.0, 1.0 - penalty + bonus))
 ```
 
-**Prime Editing**:
-```
-Safety = 1.0 (no DSB)
-Feasibility = 0.85 * 1.0 = 0.85
-Complexity = 0.35*0 + 0.25*0 + 0.20*0.1 + 0.20*0.12 = 0.044
-Risk = 0.0 (no bystander risk)
-Confidence = 1.0 (Tier A)
+Penalties (following ACMG/AMP variant classification severity; Richards et al., Genet Med, 2015; PMID 25741868):
 
-Base score = 0.30*1.0 + 0.25*0.85 - 0.20*0.044 - 0.15*0.0 + 0.10*1.0
-           = 0.300 + 0.213 - 0.009 - 0.000 + 0.100 = 0.604
-Consequence bonus = +0.03 (no DSB, no bystander)
-Final = 0.604 + 0.03 = 0.634
-```
+| Condition | Penalty | ACMG Tier |
+|-----------|---------|-----------|
+| Bystander missense | -0.10 per position | VUS-level severity |
+| Bystander nonsense | -0.25 | Likely pathogenic |
+| Splice donor (<=2 bp) | -0.15 | PVS1 |
+| Splice acceptor (<=2 bp) | -0.15 | PVS1 |
+| Splice region (3-8 bp) | -0.08 | PM/PP |
+| Frameshift bystander | -0.25 | Likely pathogenic |
+| Dual DSB + p53 active | -0.10 | Ihry et al. 2018 |
 
-**HDR (cssDNA)**:
-```
-Safety = 0.5 (one DSB, p53 active)
-Feasibility = 0.72 * 0.95 = 0.684
-Complexity = 0.35*0 + 0.25*0.15 + 0.20*0 + 0.20*0.12 = 0.062
-Risk = 0.0 (low rearrangement risk) + 0.0 (no bystander)
-Confidence = 0.7 (Tier B)
+Total consequence penalty is capped at 0.30 to prevent a single bad bystander from dominating the five primary TOPSIS dimensions.
 
-Base score = 0.30*0.5 + 0.25*0.684 - 0.20*0.062 - 0.15*0.0 + 0.10*0.7
-           = 0.150 + 0.171 - 0.012 - 0.000 + 0.070 = 0.379
-Consequence bonus = 0.0
-Final = 0.379
-```
+Bonuses:
 
-**Ranking**: ABE (0.695) > PE (0.634) > HDR (0.379)
+| Condition | Bonus |
+|-----------|-------|
+| All bystanders synonymous | +0.05 |
+| PAM disruption possible | +0.03 |
+| Short cut-to-edit (<10 bp) | +0.05 |
 
-This illustrates how the safety premium drives DSB-free approaches to the top. In this hypothetical case, ABE beats PE because it has a slightly higher feasibility prior. In practice, CRISPRArchitect's benchmark revealed that ABE rarely achieves window placement at real ClinVar loci, so PE typically wins.
+**IMPORTANT**: These penalty magnitudes are [ASSUMED] modeling choices. No published framework assigns numerical penalties to bystander consequences in the context of genome editing strategy ranking. The values are calibrated so that (a) a single bystander missense does NOT change the top strategy in most cases, (b) a bystander nonsense CAN change ranking, (c) total penalty is capped at 0.30.
+
+### 6.4 Default Weights and Their Rationale
+
+| Dimension | Weight | Normalized | Rationale |
+|-----------|--------|-----------|-----------|
+| Safety | 0.30 | 0.278 | Highest: DSBs in iPSCs trigger p53 selection; patient-safety concern |
+| Feasibility | 0.25 | 0.231 | PAM-window constraints are the binding bottleneck (0/30 BE in v2) |
+| Complexity | 0.20 | 0.185 | Each round requires electroporation + clonal expansion + karyotyping |
+| Risk | 0.15 | 0.139 | Rearrangement risk; conditional on DSB strategies already penalized by safety |
+| Confidence | 0.10 | 0.093 | Distinguishes Tier B combinations from Tier A |
+| Consequence | 0.08 | 0.074 | Bystander/splice consequences as tie-breaker within TOPSIS |
+
+These weights are explored via the sensitivity analysis (10,000 Dirichlet permutations). Users should consult rank stability rather than relying solely on the point estimate.
+
+### 6.5 Pareto Front Analysis (Weight-Independent)
+
+The Pareto front identifies strategies that are non-dominated across all 6 dimensions. A strategy A dominates B if A is at least as good on ALL dimensions and strictly better on at least one. Strategies on the Pareto front are defensible under SOME weighting scheme.
+
+Cost dimensions are negated for uniform comparison: lower cost = higher converted value.
+
+Implementation in `_pareto_front()` uses O(n^2) pairwise dominance checking, which is adequate for the small number of strategies per variant (typically 3-8).
+
+### 6.6 VIKOR and WPM Comparison Methods
+
+v3 provides two alternative MCDM methods for method-robustness comparison:
+
+**VIKOR** (Opricovic & Tzeng, 2004): Uses L1 (Manhattan) distance for group utility and L-infinity (Chebyshev) distance for individual regret. The parameter v=0.5 (balanced compromise). VIKOR Q scores are in [0,1] where LOWER is better (opposite of TOPSIS).
+
+**WPM** (Weighted Product Model; Bridgman, 1922; Triantaphyllou, 2000): Multiplicative scoring where score = product of (value^weight) across dimensions. Non-compensatory: a zero on any dimension zeros the total score. This matches the biological reality that a strategy with zero safety should never be recommended.
+
+The `cross_method_comparison()` function runs all three methods on the same decision matrix and reports:
+- Per-strategy ranks from each method
+- Pairwise rank concordance (Spearman-like fraction of agreement)
+- Whether all methods agree on the top-1 strategy
+
+### 6.7 Monte Carlo Sensitivity Analysis (Detailed)
+
+**Distribution**: Dirichlet(alpha) where alpha_j = max(w_j * concentration, min_alpha)
+- `concentration` = 20.0: So that 95% of sampled weights for the largest dimension (safety, w=0.30) fall within [0.15, 0.50]
+- `min_alpha` = 2.0: Prevents small-weight dimensions from having near-Uniform marginals, which would create asymmetric perturbation
+- Random seed: 42 (NumPy PCG64 generator for reproducibility)
+
+**Procedure**: Pre-generate all 10,000 weight vectors via vectorized `np.random.default_rng(42).dirichlet(alphas, size=10000)`. For each weight vector, run TOPSIS and record the rank of each strategy.
+
+**Output per strategy**:
+- `rank_stability`: Fraction of permutations where strategy is top-ranked
+- `mean_rank`: Mean rank across permutations
+- `rank_distribution`: {rank: fraction_of_time}
+- Standard error: SE = sqrt(p * (1-p) / n) for binomial proportion
+
+**Interpretation**: rank_stability > 0.90 = robust recommendation. rank_stability < 0.50 = sensitive to weight assumptions, warrants experimental comparison.
 
 ---
 
-## 7. Benchmark Design and Execution
+## 7. Parameter Provenance
 
-### 7.1 Why 30 Cases
+Every parameter in CRISPRArchitect carries one of three evidence tags:
+- **[MEASURED]**: Value directly from a published measurement with citation
+- **[DERIVED]**: Value computed from published data via a stated procedure
+- **[ASSUMED]**: Modeling assumption with stated rationale; no direct measurement
 
-The choice of 30 cases balances several considerations:
+### 7.1 DNA Physical Properties
 
-- **Statistical power**: 30 cases provide enough data to compute meaningful accuracy percentages (each case contributes ~3.3 percentage points). Smaller benchmarks would have high variance; a single case's outcome would swing the metric by >5%.
-- **Category coverage**: 30 cases allow 11 categories with 1-7 cases each, covering the full spectrum of editing scenarios a researcher might encounter.
-- **API feasibility**: Each case requires multiple Ensembl API calls (transcript fetch, reference validation, VEP annotation). With retry logic, the full benchmark takes ~16 minutes of wall time. Scaling to hundreds of cases would require rate-limiting management.
-- **Manual curation quality**: Every case has manually verified GRCh38 coordinates, manually assigned truth labels with biological rationale, and manually confirmed reference alleles. This level of curation is labor-intensive and does not scale easily.
+| Parameter | Value | Tag | Source |
+|-----------|-------|-----|--------|
+| DNA rise per bp (B-form) | 0.34 nm | [MEASURED] | Standard B-DNA geometry |
+| dsDNA persistence length | 50.0 nm | [MEASURED] | Hagerman, Ann Rev Biophys Biophys Chem, 1988 |
+| ssDNA persistence length | 1.5 nm | [MEASURED] | Murphy et al., Biophys J, 2004 |
+| ssDNA contour per nt | 0.63 nm | [MEASURED] | Murphy et al., Biophys J, 2004 |
 
-### 7.2 The 11 Categories and Why Each Matters
+### 7.2 End Resection Parameters
+
+| Parameter | Value | Tag | Source |
+|-----------|-------|-----|--------|
+| Short resection mean | 200 bp | [DERIVED] | Mean of 100-300 bp range; Symington 2011, Cejka 2015, Shibata et al. 2014 |
+| Short resection std | 80 bp | [DERIVED] | Set so 95% of draws fall within [40, 360] bp |
+| Long resection mean | 2000 bp | [DERIVED] | Symington 2011 (several kb), Zhou et al. 2014 (3-5 kb), Gravel et al. 2008 (1-5 kb) |
+| Resection rate | 50 nt/sec | [DERIVED] | Zhu et al., Cell, 2008; conservative in vivo estimate (in vitro: 100-200 nt/s) |
+
+### 7.3 RAD51 Filament Parameters
+
+| Parameter | Value | Tag | Source |
+|-----------|-------|-----|--------|
+| RAD51 footprint | 3 nt | [MEASURED] | Ogawa et al., Science, 1993; Yu et al., Mol Cell Biol, 2001 |
+| Nucleation minimum | 5 monomers | [DERIVED] | In vitro studies estimate 5-8 monomers |
+| Growth rate | 10/sec | [DERIVED] | Single-molecule studies estimate |
+| Min homology for invasion | 15 bp | [MEASURED] | Qi et al., Cell, 2015 (8-nt sampling; stable invasion requires ~15-20 bp) |
+
+### 7.4 Gene Conversion / Synthesis Parameters
+
+| Parameter | Value | Tag | Source |
+|-----------|-------|-----|--------|
+| SDSA displacement prob per bp | 0.002 | **[ASSUMED]** | See detailed derivation below |
+| Conversion tract mean | 500 bp | **[ASSUMED]** | 1/p; consistent with functional evidence |
+| Conversion tract min | 50 bp | **[ASSUMED]** | Below this, mismatch repair erases |
+| Conversion tract max | 5000 bp | **[ASSUMED]** | Tracts >5 kb unobserved in mammalian mitotic cells |
+| Synthesis processivity mean | 600 bp | **[ASSUMED]** | Estimated from tract length model |
+
+**SDSA displacement probability derivation**: p = 0.002 gives mean = 1/p = 500 bp, median = ln(2)/p = 347 bp, 90th percentile ~1150 bp. Evidence basis (functional, NOT direct measurement):
+1. Stark lab SDSA assay (G3, 2017; PMID 28179392): SDSA produces >=350 bp of synthesis in human cells
+2. Successful HDR with 300-1000 bp homology arms implies routine incorporation at several hundred bp
+3. Helicase regulation: BLM and RTEL1 disrupt D-loops after "a few hundred nucleotides" (Gallagher & Haber, ACS Chem Biol, 2018; PMC5835394)
+
+**NOT calibrated to**: Elliott et al. 1998 (endogenous substrate, tracts <58 bp), Kan et al. 2017 (SSTR pathway, tracts ~20 bp), Paquet et al. 2016 (ssODN/SSTR, tracts ~10-50 bp).
+
+**Sensitivity range**: p = 0.001 to 0.005 (mean tracts 200 to 1000 bp).
+
+### 7.5 Cut Structure Parameters
+
+| Parameter | Value | Tag | Source |
+|-----------|-------|-----|--------|
+| SpCas9 cut position | -3 from PAM | [MEASURED] | Jinek et al., Science, 2012 |
+| SpCas9 stagger | 0-1 bp (mostly blunt) | [MEASURED] | Shou et al., Cell Discovery, 2019 |
+| enFnCas9 stagger | 2-5 bp (midpoint 3) | **[ASSUMED]** | **WARNING**: Not directly measured. Inferred from FnCas9 crystal structure (Hirano et al., Cell, 2016) and improved HDR rates (Acharya et al., 2024) |
+| Cas12a stagger | 4-5 bp 5' overhang | [MEASURED] | Zetsche et al., Cell, 2015; Stella et al., Nature, 2017 |
+| vCas9 stagger | 4-8 bp 5' overhang | [MEASURED] | Chauhan et al., PNAS, 2023 |
+
+### 7.6 HDR Enhancement and Donor Parameters
+
+| Parameter | Value | Tag | Source |
+|-----------|-------|-----|--------|
+| HDR enhancement per bp overhang | 0.15 | [DERIVED] | Single-point linear fit to Chauhan 2023: (1.9-1)/6=0.15. **Limited**: fit to one data point |
+| Baseline HDR fraction (iPSC) | 0.08 | [DERIVED] | Paquet 2016 (5-30%, median ~10%); conservative |
+| Baseline HDR fraction (HEK293T) | 0.25 | [MEASURED] | Ran et al., Nat Protoc, 2013 |
+| Donor multiplier: linear dsDNA | 1.0 | [MEASURED] | Baseline reference |
+| Donor multiplier: linear ssDNA | 1.5 | [MEASURED] | Richardson et al., Nat Biotechnol, 2016: ~60% higher knock-in |
+| Donor multiplier: circular ssDNA | 3.0 | [DERIVED] | Iyer et al., CRISPR J, 2022: cssDNA ~1.9x over lssDNA; 1.5*1.9=2.85, rounded to 3.0 |
+| Donor multiplier: AAV ssDNA | 4.0 | **[ASSUMED]** | Martin et al. 2019; Dever et al. 2016; 10-50% in iPSCs; highly variable |
+| Optimal HA length (cssDNA) | 300 bp | **[ASSUMED]** | General HDR guidelines (Banan 2020; IDT protocols). NOT from Iyer et al. |
+| Optimal HA length (dsDNA) | 800 bp | **[ASSUMED]** | Standard for dsDNA donors |
+| cssDNA half-life multiplier | 3.0 | **[ASSUMED]** | Extrapolated from Iyer 2022 HDR improvement; no direct half-life measurement |
+
+### 7.7 D-Loop Stability Adjustments (ConversionSim)
+
+| Parameter | Value | Tag | Source |
+|-----------|-------|-----|--------|
+| Circular D-loop stability boost | 20% reduction in p | **[ASSUMED]** | Partitioned from Iyer 2022 cssDNA advantage (1.9x): ~40% attributed to D-loop stability |
+| Stagger D-loop stability boost | 15% reduction in p | **[ASSUMED]** | Partitioned from Chauhan 2023 vCas9 advantage (1.9x): ~50% attributed to D-loop stability |
+
+### 7.8 Cell Type Parameters
+
+| Parameter | iPSC | HEK293T | K562 | Tag | Source |
+|-----------|------|---------|------|-----|--------|
+| HDR base efficiency | 0.08 | 0.25 | 0.20 | [DERIVED]/[MEASURED] | Paquet 2016 / Ran 2013 / DeWitt 2016 |
+| S/G2 fraction | 0.35 | 0.55 | 0.50 | [MEASURED] | Becker 2006 / cell line data |
+| p53 active | True | False | False | [MEASURED] | Ihry 2018 / SV40 LT / TP53 frameshift |
+| Viability (single DSB) | 0.55 | 0.85 | 0.80 | [MEASURED]/[ASSUMED] | Ihry 2018 Fig 2 / assumed |
+| Viability (dual DSB) | 0.30 | 0.70 | 0.65 | **[ASSUMED]** | ~viability^1.5 + translocation lethality |
+
+### 7.9 Scoring Weights
+
+| Weight | Value | Tag | Source |
+|--------|-------|-----|--------|
+| w_safety | 0.30 | **[ASSUMED]** | Priority ordering for iPSC editing; explored via sensitivity analysis |
+| w_feasibility | 0.25 | **[ASSUMED]** | PAM-window constraints are binding bottleneck |
+| w_complexity | 0.20 | **[ASSUMED]** | Resource-intensive iPSC editing |
+| w_risk | 0.15 | **[ASSUMED]** | Conditional on DSB strategies |
+| w_confidence | 0.10 | **[ASSUMED]** | Distinguishes Tier B from Tier A |
+| w_consequence | 0.08 | **[ASSUMED]** | Tie-breaker for bystander/splice concerns |
+
+### 7.10 Consequence Penalties
+
+| Penalty | Value | Tag | Rationale |
+|---------|-------|-----|-----------|
+| Bystander missense | -0.10 | **[ASSUMED]** | ACMG VUS-level; single missense should NOT change ranking |
+| Bystander nonsense | -0.25 | **[ASSUMED]** | ACMG likely pathogenic; CAN change ranking |
+| Splice donor (<=2 bp) | -0.15 | **[ASSUMED]** | ACMG PVS1; typically causes exon skipping |
+| Splice acceptor (<=2 bp) | -0.15 | **[ASSUMED]** | ACMG PVS1 |
+| Splice region (3-8 bp) | -0.08 | **[ASSUMED]** | ACMG PM/PP; moderate risk |
+| Dual DSB + p53 | -0.10 | **[ASSUMED]** | Ihry et al. 2018 |
+| Total penalty cap | 0.30 | **[ASSUMED]** | Prevent consequence from dominating TOPSIS |
+
+---
+
+## 8. Benchmark Design and Execution
+
+### 8.1 The 30-Case Benchmark
+
+30 ClinVar variant scenarios with verified GRCh38 coordinates and predefined tiered truth labels (preferred, acceptable, reject).
 
 | Category | n | Why It Matters |
 |----------|---|----------------|
-| Clean base editable | 7 | Core use case: ClinVar transitions where BE should be feasible. Tests PAM-window verification. |
-| Base editing negative | 1 | Sanity check: HBB sickle cell is a transversion (A>T). BE must be correctly rejected. |
-| PE transversion | 2 | Transversions where only PE (not BE) can correct without DSB. Tests PE-specific design. |
-| PE small indel | 5 | Small insertions/deletions within PE range (<=40 bp ins, <=80 bp del). Tests PE indel handling. |
-| HDR large deletion | 3 | Multi-exon deletions too large for PE. HDR (or exon deletion) is the only option. Tests structural variant handling. |
-| HDR/PE small deletion | 1 | Small deletion addressable by either HDR or PE. Tests modality comparison for ambiguous cases. |
-| Compound het hybrid | 5 | Two mutations requiring different modalities. Tests hybrid strategy generation. |
-| Sequential HDR | 1 | Compound het requiring two rounds of HDR. Tests multi-round strategy handling. |
-| Dual base editing | 3 | Two transitions in the same gene. Tests dual BE strategy generation. |
-| Edge: distant variants | 1 | Two variants very far apart in the same gene. Tests distance-aware strategy selection. |
-| Edge: non-coding | 1 | Variant in 5'UTR (FMR1). Tests non-coding variant handling. |
+| Clean base editable | 7 | ClinVar transitions where BE should be feasible |
+| Base editing negative | 1 | HBB sickle cell (A>T transversion); BE must be rejected |
+| PE transversion | 2 | Transversions where only PE can correct without DSB |
+| PE small indel | 5 | Small ins/del within PE range |
+| HDR large deletion | 3 | Multi-exon deletions too large for PE |
+| HDR/PE small deletion | 1 | Ambiguous: addressable by either |
+| Compound het hybrid | 5 | Two mutations requiring different modalities |
+| Sequential HDR | 1 | Compound het requiring two HDR rounds |
+| Dual base editing | 3 | Two transitions in the same gene |
+| Edge: distant variants | 1 | Variants far apart in same gene |
+| Edge: non-coding | 1 | FMR1 5'UTR variant |
 
-### 7.3 How Truth Labels Were Assigned
+### 8.2 How Truth Labels Were Assigned
 
-Each case has three tiers of truth labels, assigned by biological reasoning (NOT by running the pipeline and accepting its output):
+Truth labels are assigned by biological reasoning (NOT by running the pipeline):
+- **Preferred**: Strategy a domain expert would recommend first-line
+- **Acceptable**: Biologically sound but suboptimal
+- **Reject**: Infeasible or dangerous
 
-- **Preferred**: The strategy a domain expert would recommend as first-line. Based on: mutation type compatibility, PAM availability (verified by manual inspection), DSB-free preference for iPSCs, and published experimental precedent.
-- **Acceptable**: Strategies that are biologically sound but suboptimal. For example, HDR is acceptable for a base-editable transition, but not preferred due to DSB risk in iPSCs.
-- **Reject**: Strategies that are infeasible or dangerous. For example, base editing for a transversion, or simultaneous dual DSBs in iPSCs.
+### 8.3 The Degenerate PE Pattern (v2) and Its Fix (v3)
 
-Example truth label for HBB sickle cell (c.20A>T, p.Glu7Val):
-- Preferred: Prime Editing (transversion, DSB-free)
-- Acceptable: HDR with ssODN (standard approach, but requires DSB)
-- Reject: Base Editing (transversion cannot be corrected by ABE or CBE)
+**v2 problem**: Prime editing was top-ranked in 29/30 cases (96.7%), base editing in 0/30 (0%), HDR in 1/30 (3.3%). This was caused by:
+1. Only SpCas9 + ABE7.10 was evaluated (no multi-nuclease)
+2. The bystander triple-counting bug artificially penalized BE
+3. ABE7.10's narrow window (4-7) missed many targets
 
-### 7.4 How Positions Were Verified
+**v3 fix**:
+1. Multi-nuclease engine evaluates ABE8e (window 3-9) with enFnCas9 (NRG PAM), SpCas9-NG (NG PAM), and SpRY (NNN PAM)
+2. Bystander moved to dedicated consequence dimension (no triple-counting)
+3. TOPSIS replaces weighted sum for more principled ranking
 
-All 30 cases use GRCh38 genomic coordinates from ClinVar or published editing studies. Verification steps:
+**v3 result**: BE = 6/30 (20%), PE = 23/30 (77%), HDR = 1/30 (3%). The six BE rescues are attributable to ABE8e paired with enFnCas9 or SpCas9-NG.
 
-1. **ClinVar lookup**: For each variant, the ClinVar accession was checked to confirm the genomic coordinates, gene symbol, and clinical significance.
-2. **Ensembl VEP**: Each position was submitted to the Ensembl Variant Effect Predictor (VEP) to verify that (a) the position maps to the expected gene, (b) the reference allele matches, and (c) the predicted consequence matches expectations.
-3. **Reference allele validation**: The pipeline's own ReferenceValidator independently checks each position against the Ensembl genome. All 30 cases passed.
+### 8.4 API Robustness
 
-### 7.5 Retry Logic for API Robustness
-
-Ensembl REST API calls occasionally fail with transient server errors. CRISPRArchitect handles this with:
-
-- **Retry count**: Up to 3 retries per API call
-- **Backoff schedule**: 1 second, 2 seconds, 4 seconds (exponential)
-- **Retried errors**: HTTP 500 (Internal Server Error), 502 (Bad Gateway), 503 (Service Unavailable), 504 (Gateway Timeout), and network timeouts
-- **Non-retried errors**: HTTP 400 (Bad Request), 404 (Not Found), 429 (Rate Limited -- these should be handled differently)
-
-In the definitive benchmark run, 4 of 120 total API calls initially failed due to transient server errors. All 4 were recovered automatically on retry, resulting in zero pipeline failures across all 30 cases.
+Ensembl REST API calls: up to 3 retries with exponential backoff (1, 2, 4 seconds). In the definitive benchmark run, 4 of 120 API calls initially failed due to transient server errors; all 4 recovered on retry, resulting in zero pipeline failures.
 
 ---
 
-## 8. Results and Interpretation
+## 9. Results and Interpretation
 
-### 8.1 Raw Results
+### 9.1 v2 Results (for comparison)
 
-The definitive benchmark run (version 1.2) produced the following aggregate results across 30 cases:
+| Metric | v2 Value |
+|--------|----------|
+| Top-1 Accuracy | 86.7% (26/30) |
+| Top-3 Accuracy | 96.7% (29/30) |
+| Rejection Accuracy | 90.0% (27/30) |
+| Strategy distribution | PE=29/30 (97%), HDR=1/30 (3%), BE=0/30 (0%) |
 
-| Metric | Value | Count |
-|--------|-------|-------|
-| **Top-1 Accuracy** | **86.7%** | 26/30 correct |
-| **Top-3 Accuracy** | **96.7%** | 29/30 correct |
-| **Rejection Accuracy** | **90.0%** | 27/30 correct |
-| Pipeline Errors | 0% | 0/30 |
-| Wall Time | 977 seconds | ~16 minutes |
+### 9.2 v3 Results
 
-**Strategy distribution** in top-1 rankings:
+| Metric | v3 Value |
+|--------|----------|
+| **Top-1 Accuracy** | **86.7% (26/30)** |
+| **Top-3 Accuracy** | **96.7% (29/30)** |
+| **Rejection Accuracy** | **86.7% (26/30)** |
+| Pipeline Errors | 0% (0/30) |
+| Strategy distribution | **BE=6/30 (20%), PE=23/30 (77%), HDR=1/30 (3%)** |
 
-| Modality | Count | Percentage |
-|----------|-------|------------|
-| Prime Editing | 29 | 96.7% |
-| HDR | 1 | 3.3% |
-| Base Editing | 0 | 0.0% |
+### 9.3 v2 vs v3 Side by Side
 
-### 8.2 Per-Category Breakdown
+| Metric | v2 | v3 | Change |
+|--------|----|----|--------|
+| Top-1 accuracy | 86.7% | 86.7% | Same |
+| Top-3 accuracy | 96.7% | 96.7% | Same |
+| Rejection accuracy | 90.0% | 86.7% | -3.3% (stricter multi-step evaluation) |
+| BE top-ranked | 0/30 (0%) | 6/30 (20%) | **+20 percentage points** |
+| PE top-ranked | 29/30 (97%) | 23/30 (77%) | -20 percentage points |
+| HDR top-ranked | 1/30 (3%) | 1/30 (3%) | Same |
 
-| Category | n | Top-1 | Top-3 | Rejection |
-|----------|---|-------|-------|-----------|
-| Clean base editable | 7 | 7/7 (100%) | 7/7 (100%) | 7/7 (100%) |
-| Base editing negative | 1 | 1/1 (100%) | 1/1 (100%) | 1/1 (100%) |
-| PE transversion | 2 | 2/2 (100%) | 2/2 (100%) | 2/2 (100%) |
-| PE small indel | 5 | 5/5 (100%) | 5/5 (100%) | 5/5 (100%) |
-| HDR large deletion | 3 | 0/3 (0%) | 3/3 (100%) | 0/3 (0%) |
-| HDR/PE small deletion | 1 | 1/1 (100%) | 1/1 (100%) | 1/1 (100%) |
-| Compound het hybrid | 5 | 5/5 (100%) | 5/5 (100%) | 5/5 (100%) |
-| Sequential HDR | 1 | 0/1 (0%) | 0/1 (0%) | 1/1 (100%) |
-| Dual base editing | 3 | 3/3 (100%) | 3/3 (100%) | 3/3 (100%) |
-| Edge: distant variants | 1 | 1/1 (100%) | 1/1 (100%) | 1/1 (100%) |
-| Edge: non-coding | 1 | 1/1 (100%) | 1/1 (100%) | 1/1 (100%) |
+### 9.4 The Key v3 Finding: BE Rescue
 
-### 8.3 Why PE Dominates
+The six base editing rescues all involved ABE8e (broader window, positions 3-9) rather than ABE7.10. The primary driver was the combination of ABE8e's extended window and enFnCas9's NRG PAM. For three cases, ABE8e paired with enFnCas9 provided the rescuing guide. For the remaining three rescued cases, the mechanism involved variants where the correction direction maps to CBE (C>T on the protospacer), and BE4max paired with enFnCas9 provided the critical PAM site.
 
-Prime editing emerged as the top-ranked modality in 29 of 30 cases. This is not a software bias but reflects the convergence of three genuine advantages within the iPSC-optimized scoring framework:
+The near-PAMless nucleases (SpCas9-NG, SpRY) contributed additional options but at lower efficiency modifiers. SpRY (NNN PAM, efficiency modifier 0.5) was too penalized in the confidence dimension (Tier B evidence) to displace established combinations.
 
-1. **No editing window constraint**: Unlike base editing, which requires the target base at positions 4-7 (ABE) or 4-8 (CBE) within the protospacer, prime editing encodes the desired edit directly in the RT template. Any edit within the PE range is feasible regardless of PAM-to-target distance.
+### 9.5 Why Overall Accuracy Did Not Change
 
-2. **Broad mutation compatibility**: PE can correct transitions, transversions, and small indels. Base editing is restricted to transitions only (ABE: A>G, CBE: C>T).
+The top-1 and top-3 accuracies are identical between v2 and v3 because all six rescued cases involved transitions where both base editing and prime editing are acceptable truth labels. The rescue affected strategy *type* distribution but not correctness. The substantive improvement is that v3 provides more diverse and biologically appropriate recommendations.
 
-3. **No DSB**: PE uses a nickase, not a nuclease. The safety score is 1.0 (same as BE), giving PE a massive advantage over HDR (safety score 0.5 in iPSC context). With Safety weighted at 0.30, this single factor creates a score gap of 0.30 * (1.0 - 0.5) = 0.15 -- often larger than all other score differences combined.
+### 9.6 The 4 Top-1 Misses (Unchanged from v2)
 
-### 8.4 Why BE Never Tops
+1. **HDR_DMD_016** (DMD large deletion): Pipeline recommended PE; deletion spans multiple exons beyond PE range
+2. **HDR_NF1_017** (NF1 large deletion): Same pattern
+3. **HDR_FBN1_022** (FBN1 large deletion): Same pattern
+4. **HDR_COL7A1_020** (Sequential HDR): Pipeline recommended PE for each variant independently; does not model multi-variant coordination
 
-Despite 7 cases being designed as "clean base editable" transitions (ClinVar variants where ABE or CBE should be applicable), base editing never emerged as the top-1 strategy. The reason is the PAM-window bottleneck:
+### 9.7 Consequence-Shift Analysis
 
-At all seven tested ClinVar loci with ABE-compatible transitions, **no SpCas9 NGG PAM site positioned the target nucleotide within the ABE editing window (positions 4-7)**. This means base editing was either infeasible or marginal at every one of these loci. Since PE has no such window constraint and shares the same safety advantage (no DSB), PE consistently outscored BE.
+In the v2 benchmark, consequence adjustments were applied in 96.4% of cases but shifted top-1 ranking in 0% of cases. In v3, with consequences as a dedicated TOPSIS dimension, their influence is more principled but still limited by PE dominance: PE inherently avoids bystander edits and DSBs.
 
-This finding -- that PAM-dependent editing window constraints are more restrictive than mutation-type classification -- is the most important scientific result of the benchmark. It suggests that published estimates of base editing applicability based on the fraction of ClinVar pathogenic variants that are transitions substantially overestimate the fraction that are practically editable with current base editors and canonical SpCas9.
+### 9.8 The PAM-Window Bottleneck (Persistent Finding)
 
-### 8.5 The 4 Top-1 Misses
-
-All four top-1 misses occurred in categories involving large deletions or sequential HDR:
-
-1. **HDR_DMD_016** (DMD large deletion): The pipeline recommended PE, but the deletion spans multiple exons and is too large for PE. HDR or exon deletion is required. The pipeline treats the variant as a point deletion at the boundary, not as a structural rearrangement.
-
-2. **HDR_NF1_017** (NF1 large deletion): Same issue. Multi-exon deletion mishandled as a single-variant problem.
-
-3. **HDR_FBN1_022** (FBN1 large deletion): Same pattern. The pipeline lacks explicit multi-exon deletion handling logic.
-
-4. **HDR_COL7A1_020** (COL7A1 compound het, sequential HDR): The expected strategy was sequential HDR (edit one allele, clone, then edit the other). The pipeline recommended PE for each variant independently, which is technically feasible for the individual variants but does not address the compound heterozygous coordination requirement.
-
-The common thread: the pipeline currently processes variants independently and does not model structural variant-specific constraints or multi-variant coordination beyond strategy enumeration.
-
-### 8.6 The 1 Top-3 Miss
-
-The single top-3 miss was **HDR_COL7A1_020**: the COL7A1 compound heterozygous case requiring sequential HDR. The expected strategy (sequential HDR with two rounds of editing) was not generated because the pipeline processes each variant independently rather than as a coordinated pair requiring temporal ordering.
-
-### 8.7 Consequence-Shift Analysis
-
-A critical question: does consequence-aware scoring actually change strategy rankings compared to naive (consequence-unaware) scoring?
-
-The answer from the benchmark is: **no, not in this dataset**. The consequence shift analysis shows:
-
-- 28 of 30 cases had valid strategies for comparison (2 cases produced no strategies for one or both scoring modes)
-- 27 of 28 cases (96.4%) had consequence adjustments applied (splice proximity penalties, bystander penalties, or clean design bonuses)
-- **0 of 28 cases (0.0%)** had their top-1 ranking shifted by consequence adjustments
-
-This means that while the consequence-aware scoring machinery is correctly implemented and consistently produces adjustments, those adjustments never change which strategy is ranked first. The reason is PE dominance: PE inherently avoids bystander edits (no editing window) and avoids DSBs (nick only), so the consequence penalties that differentiate BE and HDR strategies rarely apply to PE. Since PE already wins on safety, adding consequence penalties to BE/HDR only widens the gap.
-
-This is a genuine limitation of the current benchmark composition and the iPSC weight configuration. In a dataset with more cases where BE and PE are both feasible and closely scored, consequence adjustments would be more likely to shift rankings.
-
-### 8.8 The Key Finding: PAM-Window Bottleneck
-
-The most important scientific finding from this work deserves emphasis:
-
-**PAM-dependent editing window constraints are a more significant bottleneck for base editing applicability than mutation-type classification alone.**
-
-Why this matters for the field:
-
-1. **Overestimation of BE applicability**: Many papers cite statistics like "~60% of ClinVar pathogenic SNVs are transitions, and therefore potentially correctable by base editing." This number is based purely on mutation-type classification. The actual fraction that are practically editable requires checking that (a) a suitable PAM exists AND (b) the PAM positions the target within the 4-nt editing window. Our data suggest the practical fraction is substantially lower.
-
-2. **Guide design is not trivial**: Finding a guide is necessary but not sufficient. The guide must position the target at exactly the right place. This is a constraint that cannot be appreciated from mutation databases alone -- it requires locus-specific sequence analysis.
-
-3. **Expanded-PAM nucleases help but do not eliminate the problem**: enFnCas9 (NRG PAM) approximately doubles the number of targetable sites compared to SpCas9 (NGG), but even with NRG PAM, window placement is not guaranteed at every locus.
-
-4. **Implications for therapeutic development**: For clinical applications of base editing, each target locus should be individually verified for PAM-window compatibility. CRISPRArchitect's automated PAM-window checking provides exactly this capability.
+**PAM-dependent editing window constraints are a more significant bottleneck for base editing applicability than mutation-type classification alone.** v3 partially mitigates this through multi-nuclease/multi-editor evaluation (0% to 20% BE), but the constraint remains binding at many loci even with the broadest editor (ABE8e, window 3-9) and broadest nuclease (SpRY, NNN PAM).
 
 ---
 
-## 9. Validation Summary
+## 10. ConversionSim: Scope and Validation
 
-### 9.1 v1 Validation
+### 10.1 The Geometric Distribution Choice
 
-#### ConversionSim vs 4 Published Datasets
+ConversionSim models DNA synthesis during SDSA as a geometric random variable with per-bp displacement probability p. The geometric distribution has the memoryless property (constant hazard rate): the probability of D-loop collapse is the same at bp 1 and bp 1000. This is the simplest model and produces a good qualitative fit to published tract-length distributions (right-skewed, most tracts <1 kb, rare events to 2-5 kb).
 
-| # | Reference | Metric | Model Prediction | Published Value | Verdict |
-|---|-----------|--------|-----------------|-----------------|---------|
-| 1 | Elliott et al., MCB, 1998 | Tract length distribution shape | Right-skewed, geometric-like | Right-skewed, 80% <= 58 bp | PASS (qualitative shape match) |
-| 2 | Paquet et al., Nature, 2016 | Distance-dependent incorporation | RMSE=0.41, R2=-0.56 | Monotonic decline | POOR FIT (model over-predicts; see note) |
-| 3 | Iyer et al., CRISPR J, 2022 | cssDNA vs lssDNA ratio | 2.07x | 1.9x (range 1.5-2.1x) | GOOD MATCH |
-| 4 | Chauhan et al., PNAS, 2023 | Staggered cut enhancement | 1.82x | 1.9x (range 1.4-2.8x) | GOOD MATCH |
+Biological processes that could violate constant hazard:
+- **Increasing hazard** (D-loop less stable as it grows): Weibull(shape>1), shorter tails
+- **Decreasing hazard** (polymerase more processive once started): Weibull(shape<1), heavier tails
 
-**Note on Validation 2 (Paquet)**: The poor fit is expected and understood. Paquet used ssODN donors (~100-200 nt), which are incorporated largely through SSTR (single-strand template repair), a RAD51-independent pathway with much shorter tracts (~50 bp). ConversionSim models SDSA (mean ~500 bp tracts), which is the dominant pathway for longer donors (cssDNA, dsDNA with 300+ bp arms). The model is designed for cssDNA/dsDNA donors, not ssODN donors. A separate SSTR sub-model would be needed for ssODN validation.
+The geometric is used as a principled baseline. A Weibull alternative could be explored but requires fitting the shape parameter to sparse mammalian tract-length data.
 
-**Simulations per validation**: 50,000 Monte Carlo runs per test case.
-**Random seed**: 42 (for reproducibility).
+### 10.2 Scope Restriction: SDSA Only, Not SSTR
 
-#### MOSAIC vs 14 Published Papers
+**ConversionSim is explicitly restricted to long-donor scenarios** (cssDNA, lssDNA, dsDNA donors with homology arms >=100 bp).
 
-| Metric | Value |
-|--------|-------|
-| Papers benchmarked | 14 |
-| Author strategy in MOSAIC top-3 | 10/14 (71.4%) |
-| MOSAIC rank-1 matches | 7 papers |
-| MOSAIC rank-2 matches | 1 paper |
-| MOSAIC rank-3 matches | 2 papers |
-| Misses (rank 4+) | 4 papers |
+ssODN-mediated editing proceeds primarily via **SSTR (Single-Strand Template Repair)**, a mechanistically distinct pathway:
+- SSTR is RAD51-independent (uses PCNA, Fanconi anemia pathway)
+- SSTR produces much shorter incorporation tracts (~20-50 bp from nick site)
+- SSTR is NOT modeled by ConversionSim
 
-**Accuracy by strategy type**:
+This is not a model failure -- it is a scope boundary. Modeling ssODN with an SDSA framework would be scientifically incorrect. The SDSA pathway (resection -> RAD51 filament -> strand invasion -> D-loop synthesis) is biologically irrelevant for ssODN templates.
 
-| Author Strategy | Papers | Hits | Accuracy |
-|----------------|--------|------|----------|
-| Base editing (ABE) | 5 | 5 | 100% |
-| HDR (ssODN) | 5 | 3 | 60% |
-| Prime editing | 1 | 1 | 100% |
-| Exon skip via base editing | 1 | 1 | 100% |
-| HDR (dsDNA) | 1 | 0 | 0% |
-| Exon deletion (NHEJ) | 1 | 0 | 0% |
+### 10.3 Validation Results (4 Published Datasets)
 
-**Key pattern**: All 4 disagreements involved MOSAIC recommending a DSB-free approach (PE or BE) while authors used HDR or exon deletion. In each case, MOSAIC's recommendation is defensible as the safer approach for iPSCs. The disagreements reflect MOSAIC's safety-first prioritization versus authors who achieved high HDR efficiency through aggressive pharmacological optimization (p53 inhibition, HDR enhancers) or who published before PE was widely available.
+| # | Reference | Metric | Prediction | Published | Verdict |
+|---|-----------|--------|-----------|-----------|---------|
+| 1 | Elliott et al., MCB, 1998 (PMID 9418857) | Tract distribution shape | Right-skewed, geometric | Right-skewed, 80% <=58 bp | PASS (qualitative shape) |
+| 2 | Paquet et al., Nature, 2016 (PMID 27120160) | Distance incorporation | RMSE=0.41, R^2=-0.56 | Monotonic decline | **POOR FIT** |
+| 3 | Iyer et al., CRISPR J, 2022 (PMID 36070530) | cssDNA/lssDNA ratio | 2.07x | 1.9x (1.5-2.1x) | GOOD MATCH |
+| 4 | Chauhan et al., PNAS, 2023 (PMID 37603753) | Stagger enhancement | 1.82x | 1.9x (1.4-2.8x) | GOOD MATCH |
 
-### 9.2 v2 Validation
+Simulations per validation: 50,000 Monte Carlo runs. Random seed: 42.
 
-#### 30-Case ClinVar Benchmark on GRCh38
+### 10.4 Honest Reporting on Validation 2 (Paquet)
 
-- **86.7% Top-1 accuracy** (26/30): The system's top-ranked strategy matches an expert-defined preferred or acceptable label
-- **96.7% Top-3 accuracy** (29/30): At least one appropriate strategy appears in the top 3
-- **90.0% Rejection accuracy** (27/30): Infeasible strategies correctly excluded from top-ranked output
-- **0% pipeline failures**: All 30 cases processed without errors
-- **100% reference allele validation**: All variants confirmed against the Ensembl genome
+The poor fit (R^2 = -0.56, RMSE = 0.41) is expected and understood. Paquet used ssODNs (~100-200 nt), which are incorporated via SSTR, not SDSA. The model systematically over-predicts incorporation at every distance tested:
 
-#### Biological Sanity Checks
+| Distance (bp) | Observed | Predicted | Delta |
+|---------------|----------|-----------|-------|
+| 5 | 0.95 | 1.00 | +0.05 |
+| 10 | 0.90 | 1.00 | +0.10 |
+| 20 | 0.75 | 1.00 | +0.25 |
+| 50 | 0.45 | 1.00 | +0.55 |
+| 100 | 0.25 | 0.82 | +0.57 |
+| 200 | 0.10 | 0.67 | +0.57 |
+| 400 | 0.03 | 0.47 | +0.44 |
 
-The following sanity checks passed across all 30 cases:
+The R^2 is negative, meaning the model fits worse than a horizontal line. This is because the model predicts near-100% incorporation for distances <50 bp (where SDSA tracts easily reach), while the actual SSTR pathway shows rapid decay.
 
-- ABE is never recommended for a transversion mutation (verified: HBB sickle cell correctly gets PE, not ABE)
-- Splice proximity is correctly detected and penalized when variants fall near exon boundaries
-- HDR correctly penalized for DSB risk in iPSC context
-- PE correctly assessed as feasible for all substitutions, small insertions, and small deletions within range
-- Non-coding variants (FMR1 5'UTR) correctly identified as non-coding, with HDR recommended (consequence-aware scoring has limited applicability for non-coding regions)
+**Recommendation**: Do not use ConversionSim for ssODN incorporation predictions. Use the empirical distance-decay from Paquet et al. (2016) directly.
+
+### 10.5 Corrected Citations
+
+v2 contained citation errors for the ConversionSim validation references:
+- **Kan et al. (2017)**: Published in *Genome Research* (PMID 28356322), NOT *Molecular Cell* as stated in the v2 validation report
+- **Elliott et al. (1998)**: Tracts were <=58 bp (80% of population), NOT "200-2000 bp" as implied by the v2 documentation's gene conversion tract section
+- The 300 bp optimal HA length was NOT from Iyer et al. (who used different arm lengths for different applications) but from general HDR design guidelines
 
 ---
 
-## 10. Limitations (Honest and Detailed)
+## 11. Citation Integrity
+
+### 11.1 The Web-Search Verification Process
+
+For the v3 manuscript, every reference was verified against PubMed (PMID lookup), DOI resolution, and publisher databases. This was performed on 2026-03-30.
+
+**Results**: 20 total references. 17 verified immediately. 3 required corrections. All 5 errors flagged in the v1 reference verification were resolved (4 removed, 1 reformatted).
+
+### 11.2 Corrections Applied (2026-03-30)
+
+#### Ref 9 -- Arbab et al. (2020): WRONG JOURNAL
+- **Was**: *Nature* 584, 268-276 (2020) -- FABRICATED journal/volume/pages
+- **Corrected to**: *Cell* 182, 463-480.e30 (2020)
+- **PMID**: 32533916 | **DOI**: 10.1016/j.cell.2020.05.037
+
+#### Ref 14 -- enFnCas9 paper: WRONG TITLE, WRONG FIRST AUTHOR
+- **Was**: Chakraborty, D. et al. "enFnCas9: an engineered FnCas9..." Nat Commun 15, 1-14 (2024) -- FABRICATED title
+- **Corrected to**: Acharya, S. et al. "PAM-flexible Engineered FnCas9 variants for robust and ultra-precise genome editing and diagnostics." Nat Commun 15, 5471 (2024)
+- **PMID**: 38942756 | **DOI**: 10.1038/s41467-024-49233-w
+- **Note**: First author is Acharya S, not Chakraborty D (who is corresponding/last author). Article number 5471, not pages 1-14.
+
+#### Ref 13 -- Walton et al. (2020): STYLE FIX
+- **Was**: *Science* 368, eaba8853 (2020) -- eLocator valid but inconsistent
+- **Corrected to**: *Science* 368, 290-296 (2020)
+- **PMID**: 32217751
+
+### 11.3 Code-Level Reference Updates
+
+The enFnCas9 reference was corrected in `utils/constants.py` across all occurrences:
+- "Chakraborty et al., Nat Commun, 2024" changed to "Acharya et al., Nat Commun, 2024 (15:5471)"
+- Applied to NUCLEASE_PARAMS["enFnCas9"], BASE_EDITOR_PROFILES["ABE8e-enFnCas9"], and BASE_EDITOR_PROFILES["BE4max-enFnCas9"]
+
+### 11.4 v1 Error Resolution
+
+| v1 Error | Resolution |
+|----------|------------|
+| Ref 13 (Paquet): "Bhatt S" wrong author | Resolved -- v3 uses "Paquet D et al." |
+| Ref 14 (Symington): wrong year/volume | Resolved -- reference removed from v3 |
+| Ref 15 (Cejka): wrong journal | Resolved -- reference removed from v3 |
+| Ref 19 (Kan): "Taber S" wrong author | Resolved -- reference removed from v3 |
+| Ref 22 (Aymard): "Clapier P" wrong author | Resolved -- reference removed from v3 |
+
+### 11.5 Lessons Learned
+
+AI-generated reference lists require systematic verification. Three of 20 references in the v3 manuscript had errors (15%) that were only caught by PubMed lookup. The most serious was the enFnCas9 paper, where the title, first author name, and page numbers were all fabricated. The project now requires PMID verification for every reference before inclusion in any document.
+
+---
+
+## 12. Limitations (Honest and Detailed)
 
 ### Limitation 1: No Experimental Validation
 
-**What it is**: CRISPRArchitect's recommendations are computational predictions that have not been validated in a prospective experimental design-outcome loop. The benchmark evaluates against expert-defined truth labels, not against actual editing outcomes in cells.
-
-**Why it matters**: Computational feasibility does not guarantee experimental success. Many factors that influence editing efficiency (chromatin accessibility, cell cycle stage, delivery efficiency, RNA secondary structure) are not modeled. A strategy ranked first by the pipeline might yield lower efficiency than a strategy ranked third.
-
-**How it could be fixed**: Design editing experiments based on CRISPRArchitect recommendations and compare predicted rankings against observed editing efficiencies. Use the experimental outcomes to refine the scoring weights. This is the most critical next step for the project.
+CRISPRArchitect's recommendations are computational predictions that have not been validated in a prospective experimental design-outcome loop. The benchmark evaluates against expert-defined truth labels, not actual editing outcomes. A strategy ranked first might yield lower efficiency than a strategy ranked third due to factors not modeled (chromatin accessibility, delivery efficiency, RNA secondary structure).
 
 ### Limitation 2: Simplified CDS Model
 
-**What it is**: The coding annotation module treats the spliced exonic transcript as a surrogate for the full coding sequence. It does not model alternative splicing, non-canonical reading frames, or overlapping genes.
-
-**Why it matters**: For genes with complex transcript architectures (multiple isoforms, retained introns, non-AUG start codons), the simplified model may miss consequences that affect specific isoforms. A variant classified as synonymous in the canonical transcript might be missense or splice-disrupting in an alternative isoform.
-
-**How it could be fixed**: Integrate MANE Select transcripts (which represent the consensus clinical transcript) and optionally evaluate multiple isoforms. Flag variants where consequence differs across isoforms.
+The coding annotation module treats the spliced exonic transcript as a surrogate for the full coding sequence. It does not model alternative splicing, non-canonical reading frames, or overlapping genes. A variant classified as synonymous in the canonical transcript might be missense in an alternative isoform.
 
 ### Limitation 3: No Chromatin Accessibility
 
-**What it is**: CRISPRArchitect does not incorporate chromatin state (open vs. closed chromatin), replication timing, or epigenomic context. All loci are treated as equally accessible.
+All loci are treated as equally accessible. Editing efficiency varies dramatically by locus based on chromatin state (open vs. closed), replication timing, and epigenomic context. Two loci with identical PAM and guide scores may differ by 10-fold in actual efficiency.
 
-**Why it matters**: Editing efficiency varies dramatically by locus. Cas9 binding is strongly influenced by chromatin accessibility (open chromatin enables binding; heterochromatin blocks it). Two loci with identical PAM and guide scores may differ by 10-fold in actual editing efficiency. HDR rates are also influenced by replication timing (S/G2 phase is required for HDR).
+### Limitation 4: Local Off-Target Scoring Only
 
-**How it could be fixed**: Integrate ATAC-seq or DNase-seq data from iPSCs to compute per-locus accessibility scores. Use ENCODE chromatin state annotations (e.g., ChromHMM). Adjust feasibility scores by accessibility.
+The CFD/MIT off-target scoring uses local sequence enumeration (+-200 bp window), NOT genome-wide search. For clinical applications, genome-wide off-target prediction using Cas-OFFinder or CRISPOR is essential. Furthermore, the CFD and MIT matrices are trained on SpCas9 data; their accuracy for enFnCas9, SpCas9-NG, SpRY, and Cas12a is extrapolated (Tier B evidence).
 
-### Limitation 4: No Off-Target Prediction
+### Limitation 5: Large Deletions Poorly Handled
 
-**What it is**: CRISPRArchitect evaluates on-target feasibility and consequence but does not predict off-target editing sites for the recommended guides.
+All three HDR-required large deletion cases (DMD, NF1, FBN1) were top-1 misses. The pipeline processes variants as point mutations, not structural rearrangements. Multi-exon deletions require dual-guide excision strategies that are not yet implemented.
 
-**Why it matters**: Off-target editing is a major safety concern, especially for therapeutic applications. A guide with perfect on-target design but numerous off-target sites would be a poor choice. Existing tools (Cas-OFFinder, CRISPOR, CRISPRscan) provide this analysis, but it is not integrated into CRISPRArchitect's scoring.
+### Limitation 6: No Multi-Variant Coordination
 
-**How it could be fixed**: Integrate Cas-OFFinder or a similar alignment-based off-target predictor. Compute off-target scores for each candidate guide and incorporate them into the Risk component of the scoring function.
+The pipeline processes each variant independently. It does not model temporal coordination for compound heterozygous cases requiring sequential editing. This caused the single top-3 miss (COL7A1 sequential HDR).
 
-### Limitation 5: BE Applicability Lower Than Expected
+### Limitation 7: Consequence Scoring Impact Limited by PE Dominance
 
-**What it is**: At all seven tested ClinVar loci with ABE-compatible transitions, no SpCas9 guide placed the target within the editing window. Base editing therefore never emerged as the top-1 strategy.
+In the iPSC weight configuration, PE dominance means consequence penalties (which primarily affect BE and HDR) rarely shift top-1 rankings. With the v3 consequence dimension in TOPSIS, the influence is more principled but still secondary to safety/feasibility differences.
 
-**Why it matters**: This may give the impression that base editing is rarely useful, which is not the biological reality. The benchmark's 7 loci may not be representative of all ClinVar transitions. Furthermore, with expanded-PAM nucleases (enFnCas9), some of these loci might become BE-feasible.
+### Limitation 8: enFnCas9 Stagger Not Directly Measured
 
-**How it could be fixed**: Expand the benchmark to include ClinVar loci where BE feasibility has been experimentally confirmed (e.g., loci used in published BE studies). Systematically test enFnCas9 PAM availability at all loci. This limitation is a genuine biological constraint, not a software deficiency, but the benchmark composition amplifies its apparent severity.
-
-### Limitation 6: Large Deletions Poorly Handled
-
-**What it is**: All three HDR-required large deletion cases were top-1 misses. The pipeline recommended PE for individual variants at the deletion boundaries, which is technically feasible for the point mutations but does not address the multi-exon structural nature of the deletion.
-
-**Why it matters**: Large deletions (>100 bp spanning multiple exons) require fundamentally different approaches: dual-guide excision followed by HDR, or exon skipping/deletion. The pipeline's current architecture processes variants as point mutations, not as structural rearrangements.
-
-**How it could be fixed**: Add explicit structural variant detection: if the deletion spans multiple exons or exceeds PE range (80 bp), automatically flag it as requiring HDR or exon deletion. Generate dual-guide excision strategies for large deletions.
-
-### Limitation 7: Consequence Scoring Doesn't Shift Rankings
-
-**What it is**: In the 30-case benchmark, consequence-aware scoring adjustments were applied in 96.4% of cases but shifted the top-1 ranking in 0% of cases. The consequence-aware machinery is implemented and tested but had no practical impact on strategy selection.
-
-**Why it matters**: This undermines the claim that consequence-aware scoring "influences strategy prioritization." While the machinery is correctly implemented, PE dominance in the iPSC scoring context means consequence penalties (which primarily affect BE and HDR) cannot overcome PE's inherent advantages.
-
-**How it could be fixed**: (1) Design benchmark cases specifically to test consequence-shift scenarios (e.g., a locus where BE is feasible but has a severe bystander nonsense consequence, making PE preferable). (2) Test with non-iPSC weight configurations where safety has lower weight, allowing consequence differences to matter more. (3) Acknowledge that PE dominance makes consequence adjustments less impactful in iPSC context, which is itself an informative result.
-
-### Limitation 8: Single-Gene Focus
-
-**What it is**: CRISPRArchitect processes variants within a single gene. It cannot handle multi-gene editing scenarios (e.g., correcting mutations in two different genes on different chromosomes simultaneously).
-
-**Why it matters**: Some disease models require multi-gene editing (e.g., creating a double-knockout, or correcting mutations in a gene and its regulatory element on a different chromosome). The pipeline's architecture assumes all variants share a single transcript.
-
-**How it could be fixed**: Extend the pipeline to accept variants from multiple genes, fetch separate transcripts for each, and generate strategies that span genes. Multi-gene strategies would need special translocation risk assessment (ChromBridge integration).
+The enFnCas9 stagger_bp=3 is an [ASSUMED] parameter based on crystal structure inference, NOT direct biochemical characterization. This affects HDR enhancement estimates for enFnCas9. Should be updated when direct data is published.
 
 ### Limitation 9: No Indel Outcome Prediction
 
-**What it is**: For HDR strategies, the pipeline does not predict the distribution of indel outcomes at the cut site. When HDR fails, the DSB is typically repaired by NHEJ, producing indels. The ratio of HDR to NHEJ and the indel spectrum are not predicted.
-
-**Why it matters**: NHEJ outcomes determine the "background" of unedited cells. If NHEJ produces mainly in-frame deletions, the unedited cells may retain partial gene function. If NHEJ produces frameshifts, the unedited cells will have knockout alleles. This affects screening strategy and clone selection.
-
-**How it could be fixed**: Integrate inDelphi (Shen et al., Nature, 2018) or a similar NHEJ outcome predictor. Compute the expected HDR:NHEJ ratio and incorporate the indel spectrum into the complexity/risk scoring.
+For HDR strategies, the pipeline does not predict NHEJ indel outcomes when HDR fails. The HDR:NHEJ ratio and indel spectrum are not predicted.
 
 ### Limitation 10: Ensembl API Dependency
 
-**What it is**: The v2 pipeline requires internet connectivity to access the Ensembl REST API for transcript information, reference validation, and VEP annotation. Offline use is not fully supported.
+Requires internet connectivity. The Ensembl API has rate limits, occasional downtime, and version changes. No offline mode with cached data.
 
-**Why it matters**: The Ensembl API is a shared resource with rate limits and occasional downtime. In a clinical setting, internet dependency introduces a point of failure. Ensembl database versions change over time, potentially affecting reproducibility.
+### Limitation 11: Single-Gene Focus
 
-**How it could be fixed**: Cache transcript and genome data locally. Provide a pre-built SQLite database with canonical transcripts for common genes. Allow offline mode that uses cached data, falling back to API only for novel genes. Pin the Ensembl release version in results metadata for reproducibility.
+Cannot handle multi-gene editing scenarios (e.g., correcting mutations in two genes on different chromosomes simultaneously).
 
----
+### Limitation 12: Scoring Weights Are Not Empirically Calibrated
 
-## 11. Future Directions
-
-### 11.1 Experimental Validation Plan
-
-The most critical next step. Proposed approach:
-1. Select 10-15 ClinVar variants from the benchmark where the pipeline makes strong recommendations
-2. Design editing reagents (BE, PE, HDR) according to CRISPRArchitect's recommendations AND according to alternative strategies
-3. Edit iPSC lines with both the recommended and alternative strategies
-4. Compare editing efficiency, specificity (bystander profile), and clone quality
-5. Use the experimental outcomes to refine scoring weights
-
-### 11.2 Chromatin Integration
-
-Incorporate ATAC-seq and Hi-C data to make locus-specific editing efficiency predictions:
-- ATAC-seq from iPSCs (ENCODE) for chromatin accessibility at guide target sites
-- Hi-C for translocation risk refinement (replacing the generic polymer model)
-- ChromHMM state annotations for context-dependent efficiency adjustment
-
-### 11.3 ML-Based Scoring Refinement
-
-Replace the heuristic scoring weights with a learned model:
-- Train a gradient-boosted tree or neural network on experimental editing outcomes
-- Features: safety score, feasibility score, complexity score, guide quality metrics, chromatin accessibility
-- Label: editing efficiency and/or clone quality
-- Requires experimental validation data (see 11.1)
-
-### 11.4 HGVS Parser
-
-Allow direct input of clinical variant nomenclature (e.g., "NM_000267.3:c.910C>T" or "NF1 p.Arg304Ter") without requiring the user to look up genomic coordinates. This requires:
-- HGVS string parsing (using biocommons/hgvs library or custom parser)
-- Transcript-to-genomic coordinate conversion
-- Support for protein-level notation back-translation
-
-### 11.5 Off-Target Integration
-
-Integrate off-target prediction into the scoring framework:
-- Run Cas-OFFinder for each candidate guide
-- Compute off-target score based on number and severity of off-target sites
-- Incorporate into the Risk component of the scoring function
-- Flag guides with off-targets in known oncogenes or tumor suppressors
-
-### 11.6 Clinical-Grade Reporting
-
-Generate reports suitable for clinical review boards:
-- Standardized format following ACMG/AMP guidelines
-- Include variant classification, strategy rationale, risk assessment
-- Comprehensive guide QC (GC content, poly-T, off-targets, specificity scores)
-- Donor template sequences with annotated features
-- Screening protocol recommendations (colony number, genotyping primers)
-
-### 11.7 Multi-Gene Support
-
-Extend the pipeline to handle variants across multiple genes:
-- Separate transcript fetching per gene
-- Cross-gene translocation risk assessment
-- Multi-gene strategy enumeration (sequential editing of different genes)
+The TOPSIS weights are [ASSUMED] based on reasoning about iPSC biology, not calibrated against experimental outcome data. The sensitivity analysis quantifies how robust rankings are to weight variation, but this is not the same as empirical calibration.
 
 ---
 
-## 12. Technical Details
+## 13. Future Directions
 
-### 12.1 Requirements
+### 13.1 Benchmark Expansion
+
+- Increase from 30 to 100+ cases with diverse variant types
+- Include cases where BE feasibility has been experimentally confirmed
+- Add non-human model organism variants (mouse iPSCs)
+- Include cases specifically designed to test consequence-shift scenarios
+
+### 13.2 Experimental Validation (Most Critical)
+
+Proposed approach:
+1. Select 10-15 variants where the pipeline makes strong recommendations with high rank stability
+2. Design editing reagents for both the recommended and alternative strategies
+3. Edit iPSC lines with all strategies
+4. Compare editing efficiency, bystander profiles, clone quality
+5. Use outcomes to refine scoring weights empirically
+
+### 13.3 Genome-Wide Off-Target Integration
+
+Integrate Cas-OFFinder or CRISPOR for genome-wide off-target search. Flag guides with off-targets in oncogenes or tumor suppressors.
+
+### 13.4 Chromatin Accessibility
+
+Incorporate ATAC-seq from iPSCs (ENCODE) for locus-specific accessibility scores. Use ChromHMM state annotations.
+
+### 13.5 Multi-Variant Coordination
+
+Model temporal ordering for compound heterozygous cases. Generate sequential editing strategies with explicit intermediate clone validation steps.
+
+### 13.6 SSTR Sub-Model for ssODN
+
+Add a dedicated SSTR model for ssODN-mediated editing (RAD51-independent, PCNA-dependent), parameterized to Paquet et al. (2016) and Richardson et al. (2016) data.
+
+### 13.7 Structural Variant Handling
+
+Add explicit multi-exon deletion detection and dual-guide excision strategy generation.
+
+### 13.8 Machine Learning Scoring Refinement
+
+Replace heuristic weights with a learned model once experimental validation data is available. Candidates: gradient-boosted trees on safety/feasibility/complexity features predicting editing outcome.
+
+---
+
+## 14. Technical Details
+
+### 14.1 Requirements
 
 **Python version**: 3.9 or higher
 
@@ -1330,257 +1212,238 @@ pandas>=2.0.0
 requests>=2.28.0
 ```
 
-**Web app dependencies** (webapp/requirements.txt):
-```
-streamlit>=1.30.0
-```
+**Web app dependencies**: `streamlit>=1.30.0`
 
-**No GPU required**. All computations are CPU-based. The Monte Carlo simulations in ConversionSim use NumPy vectorized operations for efficiency.
+**No GPU required.** All computations are CPU-based. Monte Carlo simulations use NumPy vectorized operations.
 
-### 12.2 Installation
+### 14.2 Installation
 
 ```bash
-# Clone the repository
 git clone https://github.com/visvikbharti/CRISPRArchitect.git
 cd CRISPRArchitect/crisprarchitect
-
-# Install dependencies
 pip install -r requirements.txt
-
-# Verify installation
 python -c "from core.models import GenomicVariantInput; print('OK')"
 ```
 
-**Docker installation** (alternative):
+Docker alternative:
 ```bash
 docker-compose up --build
 ```
 
-### 12.3 Running the Pipeline
+### 14.3 Running the v3 Pipeline
 
 ```python
 from core.pipeline.strategy_stage import StrategyPipeline
 from core.models import GenomicVariantInput
 
-# Initialize pipeline for iPSC editing with SpCas9
-pipeline = StrategyPipeline(cell_type="iPSC", nuclease="SpCas9")
+# Initialize with v3 TOPSIS scoring
+pipeline = StrategyPipeline(cell_type="iPSC", nuclease="enFnCas9")
 
-# Define variant(s)
 result = pipeline.run([
     GenomicVariantInput(
-        chromosome="17",
-        position=31200443,
-        ref_allele="C",
-        alt_allele="T",
-        gene_symbol="NF1",
-        name="c.910C>T",
+        chromosome="17", position=31200443,
+        ref_allele="C", alt_allele="T",
+        gene_symbol="NF1", name="c.910C>T",
     ),
 ])
 
-# Access results
-print(f"Top strategy: {result.top_strategy.strategy_name}")
-print(f"Score: {result.top_strategy.overall_score:.3f}")
-
 for strategy in result.strategies:
     print(f"  #{strategy.rank}: {strategy.strategy_name} "
-          f"(score={strategy.overall_score:.3f}, "
-          f"confidence={strategy.confidence})")
-
-# Access rejected strategies
-for rej in result.rejected_strategies:
-    print(f"  REJECTED: {rej.name} — {rej.rejection_reasons}")
+          f"(TOPSIS={strategy.overall_score:.4f}, "
+          f"stability={getattr(strategy, 'rank_stability', 'N/A')})")
 ```
 
-### 12.4 Running Tests
+### 14.4 Running Tests
 
 ```bash
 # Run all tests
 python -m pytest tests/ -v
 
-# Run specific test files
-python -m pytest tests/test_v2_models.py -v
-python -m pytest tests/test_feasibility.py -v
-python -m pytest tests/test_strategy_generation.py -v
-python -m pytest tests/test_conversion_sim.py -v
-
-# Run with coverage
-python -m pytest tests/ --cov=core --cov=conversion_sim --cov-report=html
+# v3-specific tests
+python -m pytest tests/test_topsis_scorer.py -v
+python -m pytest tests/test_multi_nuclease.py -v
+python -m pytest tests/test_off_target.py -v
+python -m pytest tests/test_hgvs_parser.py -v
 ```
 
-Test suite summary:
-- **test_conversion_sim.py**: 30 tests for v1 ConversionSim validation
-- **test_v2_models.py**: Tests for all core dataclass instantiation
-- **test_feasibility.py**: Tests for PAM scanning and BE/PE/HDR engines
-- **test_strategy_generation.py**: Tests for strategy generation and scoring
-- **Total**: 93 v2 tests + 30 v1 tests = 123 total tests
+Total test suite: ~200 tests covering v1 (30 ConversionSim) + v2 (93 pipeline) + v3 (new TOPSIS/multi-nuclease/off-target/HGVS tests).
 
-### 12.5 Running the Benchmark
+### 14.5 Running the Benchmark
 
 ```bash
-# Run the full 30-case benchmark (requires internet for Ensembl API)
 python -m benchmarks.run_benchmark --input benchmarks/dataset_v1.json
-
-# Results are saved to benchmark_results/
-# Figures are generated in benchmark_results/figures/
 ```
 
-The benchmark takes approximately 16 minutes to complete (977 seconds in the definitive run) due to Ensembl API calls. Each case requires 3-4 API calls (transcript fetch, reference validation, sequence fetch, and optionally VEP).
+Takes approximately 16 minutes due to Ensembl API calls.
 
-### 12.6 Running the Web App
+### 14.6 Adding a New Nuclease
 
-```bash
-# Launch the Streamlit interface
-streamlit run webapp/app.py
-
-# Or use the convenience script
-bash webapp/run.sh
-```
-
-The web app provides:
-- Gene name input with Ensembl lookup
-- Interactive mutation definition (position, ref, alt alleles)
-- Cell type and nuclease selection
-- Real-time strategy ranking display
-- Visualization of feasibility across modalities
-
-### 12.7 Adding a New Nuclease
-
-Edit `utils/constants.py` and add an entry to the `NUCLEASE_PARAMS` dictionary:
+Edit `utils/constants.py` and add to `NUCLEASE_PARAMS`:
 
 ```python
-"NewCas9": {
-    "pam": "NNGG",              # PAM sequence (IUPAC notation)
-    "cut_type": "staggered_5prime",  # "blunt" or "staggered_5prime" or "staggered_3prime"
-    "stagger_bp": 3,            # Overhang length in bp (0 for blunt)
-    "hdr_multiplier": 1.3,      # HDR efficiency multiplier relative to SpCas9
-    "specificity": "high",      # "high", "medium", or "low"
-    "description": "My new Cas9 variant with NNGG PAM",
+NUCLEASE_PARAMS["NewNuclease"] = {
+    "pam": "NNNN",
+    "cut_type": "blunt",
+    "stagger_bp": 0,
+    "hdr_multiplier": 1.0,
+    "specificity": "moderate",
+    "description": "Description here",
+    "reference": "Author et al., Journal, Year",
 }
 ```
 
-Then update the PAM scanner in `core/feasibility/pam_scan.py` to handle the new PAM pattern.
+If pairing with base editors, add entries to `EDITOR_NUCLEASE_EFFICIENCY`.
 
-### 12.8 Adding a New Cell Type
+### 14.7 CI/CD
 
-Edit `utils/constants.py` and add an entry to the `CELL_TYPE_PARAMS` dictionary:
-
-```python
-"my_cell_type": {
-    "hdr_base_efficiency": 0.15,       # Baseline HDR efficiency (0-1)
-    "cell_cycle_s_g2_fraction": 0.40,  # Fraction of cells in S/G2 (HDR-competent)
-    "p53_active": True,                # Whether p53 pathway is active
-    "viability_single_dsb": 0.65,      # Survival after single DSB
-    "viability_dual_dsb": 0.40,        # Survival after dual simultaneous DSBs
-    "description": "My custom cell type",
-}
-```
-
-The scoring engine reads these parameters automatically to adjust safety scores and HDR feasibility estimates.
-
-### 12.9 Adding New Benchmark Cases
-
-Edit `benchmarks/dataset_v1.json` and add a new case entry:
-
-```json
-{
-    "case_id": "NEW_GENE_031",
-    "gene_symbol": "GENE",
-    "category": "your_category",
-    "variants": [
-        {
-            "chromosome": "1",
-            "position": 12345678,
-            "ref_allele": "A",
-            "alt_allele": "G",
-            "gene_symbol": "GENE",
-            "name": "c.100A>G"
-        }
-    ],
-    "cell_type": "iPSC",
-    "nuclease": "SpCas9",
-    "truth_label": {
-        "preferred": ["Single-step Base Editing"],
-        "acceptable": ["Single-step Prime Editing"],
-        "reject": ["Simultaneous Dual HDR"]
-    },
-    "disease_context": "Disease name",
-    "source_pmid": "12345678",
-    "rationale": [
-        "A>G transition is ABE-compatible",
-        "PAM available at position X"
-    ],
-    "notes": "Verified against ClinVar accession VCV000012345"
-}
-```
-
-Ensure:
-1. GRCh38 coordinates are correct (verify against ClinVar and Ensembl VEP)
-2. Reference allele matches the Ensembl genome
-3. Truth labels are assigned by biological reasoning, not by running the pipeline
-4. Rationale explains why each truth label tier was chosen
+GitHub Actions workflow (`.github/workflows/ci.yml`) runs the full test suite on push to main. Docker builds are tested on every PR.
 
 ---
 
 ## Appendix A: Verified Numbers
 
-These numbers have been verified against the actual code and benchmark results. They should be cited exactly as listed here.
+Every number below has been verified against the actual codebase as of 2026-03-30.
 
-| Metric | Value | Source |
-|--------|-------|--------|
-| v1 codebase | ~24,000 LOC | 6 modules across conversion_sim, mosaic, topopred, chrombridge, loopsim, webapp |
-| v2 codebase | ~11,000 LOC | 26 new files across core/, benchmarks/, tests/ |
-| Total v1 tests | 30 | test_conversion_sim.py |
-| Total v2 tests | 93 | test_v2_models.py + test_feasibility.py + test_strategy_generation.py |
-| Total tests | 123 | 30 + 93 |
-| Benchmark cases | 30 | benchmarks/dataset_v1.json |
-| Top-1 accuracy | 86.7% (26/30) | benchmark_results/definitive_benchmark_results.json |
-| Top-3 accuracy | 96.7% (29/30) | benchmark_results/definitive_benchmark_results.json |
-| Rejection accuracy | 90.0% (27/30) | benchmark_results/definitive_benchmark_results.json |
-| Strategy distribution | PE=29, HDR=1, BE=0 | benchmark_results/definitive_benchmark_results.json |
-| Consequence shift rate | 0.0% (0/28) | benchmark_results/consequence_shift_analysis.json |
-| Cases with adjustments | 96.4% (27/28) | benchmark_results/consequence_shift_analysis.json |
-| ConversionSim cssDNA ratio | 2.07x (Iyer observed: 1.9x) | validation/VALIDATION_REPORT.md |
-| ConversionSim stagger ratio | 1.82x (Chauhan observed: 1.9x) | validation/VALIDATION_REPORT.md |
-| MOSAIC concordance | 71.4% (10/14 papers) | validation/MOSAIC_BENCHMARK_REPORT.md |
-| MOSAIC BE accuracy | 100% (5/5 papers) | validation/MOSAIC_BENCHMARK_REPORT.md |
-| Scoring weight: Safety | 0.30 | core/pipeline/strategy_stage.py |
-| Scoring weight: Feasibility | 0.25 | core/pipeline/strategy_stage.py |
-| Scoring weight: Complexity | 0.20 | core/pipeline/strategy_stage.py |
-| Scoring weight: Risk | 0.15 | core/pipeline/strategy_stage.py |
-| Scoring weight: Confidence | 0.10 | core/pipeline/strategy_stage.py |
-| Consequence penalty: splice donor/acceptor | -0.15 | paper/CRISPRArchitect_v2_manuscript.md |
-| Consequence penalty: splice region | -0.08 | paper/CRISPRArchitect_v2_manuscript.md |
-| Consequence penalty: bystander missense | -0.10 per position | paper/CRISPRArchitect_v2_manuscript.md |
-| Consequence penalty: bystander nonsense | -0.25 per position | paper/CRISPRArchitect_v2_manuscript.md |
-| Consequence bonus: all bystanders synonymous | +0.05 | paper/CRISPRArchitect_v2_manuscript.md |
-| Benchmark wall time | 977 seconds (~16 min) | benchmark_results/definitive_benchmark_results.json |
-| API retries in benchmark | 4/120 calls (all recovered) | paper/CRISPRArchitect_v2_manuscript.md |
+### From `utils/constants.py`:
+
+| Constant | Value | Line |
+|----------|-------|------|
+| SDSA_DISPLACEMENT_PROB_PER_BP | 0.002 | 172 |
+| SHORT_RESECTION_MEAN_BP | 200 | 58 |
+| LONG_RESECTION_MEAN_BP | 2000 | 69 |
+| RAD51_FOOTPRINT_NT | 3 | 87 |
+| MIN_HOMOLOGY_FOR_INVASION_BP | 15 | 101 |
+| CONVERSION_TRACT_MEAN_BP | 500 | 136 |
+| CONVERSION_TRACT_MAX_BP | 5000 | 139 |
+| HDR_ENHANCEMENT_PER_BP_OVERHANG | 0.15 | 224 |
+| BASELINE_HDR_FRACTION_IPSC | 0.08 | 229 |
+| DONOR_TOPOLOGY_MULTIPLIER["circular_ssDNA"] | 3.0 | 263 |
+| DONOR_TOPOLOGY_MULTIPLIER["linear_ssDNA"] | 1.5 | 261 |
+| OPTIMAL_HA_LENGTH_CSSDNA | 300 | 274 |
+| CSSDNA_HALFLIFE_MULTIPLIER | 3.0 | 287 |
+| ENFNCAS9_STAGGER_RANGE | (2, 5) | 201 |
+
+### From `core/pipeline/strategy_stage.py`:
+
+| Constant | Value | Line |
+|----------|-------|------|
+| TOPSISScorer default w_safety | 0.30 | 437 |
+| TOPSISScorer default w_feasibility | 0.25 | 438 |
+| TOPSISScorer default w_complexity | 0.20 | 439 |
+| TOPSISScorer default w_risk | 0.15 | 440 |
+| TOPSISScorer default w_confidence | 0.10 | 441 |
+| TOPSISScorer default w_consequence | 0.08 | 442 |
+| n_sensitivity_runs | 10000 | 454 |
+| Dirichlet concentration | 20.0 | 735 |
+| Dirichlet min_alpha | 2.0 | 736 |
+| Sensitivity seed | 42 | 741 |
+| BENEFIT_DIMS | {0, 1, 4, 5} | 428 |
+| COST_DIMS | {2, 3} | 429 |
+| VIKOR default v | 0.5 | 792 |
+
+### From `core/mosaic/annotation_integration.py`:
+
+| Constant | Value | Line |
+|----------|-------|------|
+| PENALTY_BYSTANDER_MISSENSE | -0.10 | 91 |
+| PENALTY_BYSTANDER_NONSENSE | -0.25 | 92 |
+| PENALTY_SPLICE_DONOR | -0.15 | 93 |
+| PENALTY_SPLICE_ACCEPTOR | -0.15 | 94 |
+| PENALTY_SPLICE_REGION | -0.08 | 95 |
+| PENALTY_DUAL_DSB_P53 | -0.10 | 96 |
+| BONUS_ALL_BYSTANDERS_SYNONYMOUS | 0.05 | 99 |
+| BONUS_PAM_DISRUPTION | 0.03 | 100 |
+| BONUS_SHORT_CUT_TO_EDIT | 0.05 | 101 |
+
+### From `core/mosaic/generator.py`:
+
+| Prior | FEASIBLE | MARGINAL |
+|-------|----------|----------|
+| Single BE | 0.95 | 0.80 |
+| Single PE | 0.82 | 0.68 |
+| Single HDR | 0.72 | 0.60 |
+| Dual BE | 0.92 | 0.78 |
+| Dual PE | 0.84 | 0.70 |
+| Sequential HDR | 0.68 | 0.56 |
+| Hybrid BE+HDR | 0.80 | 0.66 |
+| Hybrid PE+HDR | 0.76 | 0.63 |
+
+### From `conversion_sim/synthesis.py`:
+
+| Constant | Value | Line |
+|----------|-------|------|
+| _CIRCULAR_DLOOP_STABILITY_BOOST | 0.20 | 120 |
+| _STAGGER_DLOOP_STABILITY_BOOST | 0.15 | 135 |
+
+### From `utils/constants.py` -- Editor-Nuclease Efficiency Matrix:
+
+| Combination | Modifier |
+|-------------|----------|
+| (ABE8e, SpCas9) | 1.0 |
+| (ABE8e, enFnCas9) | 0.8 |
+| (ABE8e, SpCas9-NG) | 0.7 |
+| (ABE8e, SpRY) | 0.5 |
+| (BE4max, SpCas9) | 1.0 |
+| (BE4max, enFnCas9) | 0.8 |
+| (BE4max, SpCas9-NG) | 0.7 |
+| (BE4max, SpRY) | 0.5 |
+
+### Benchmark Numbers:
+
+| Metric | v2 | v3 |
+|--------|----|----|
+| Total cases | 30 | 30 |
+| Top-1 accuracy | 86.7% (26/30) | 86.7% (26/30) |
+| Top-3 accuracy | 96.7% (29/30) | 96.7% (29/30) |
+| Rejection accuracy | 90.0% (27/30) | 86.7% (26/30) |
+| BE top-ranked | 0 (0%) | 6 (20%) |
+| PE top-ranked | 29 (97%) | 23 (77%) |
+| HDR top-ranked | 1 (3%) | 1 (3%) |
 
 ---
 
 ## Appendix B: Key References
 
-1. Komor, A. C. et al. Programmable editing of a target base in genomic DNA without double-stranded DNA cleavage. *Nature* **533**, 420-424 (2016). [CBE]
-2. Gaudelli, N. M. et al. Programmable base editing of A*T to G*C in genomic DNA without DNA cleavage. *Nature* **551**, 464-471 (2017). [ABE]
-3. Anzalone, A. V. et al. Search-and-replace genome editing without double-strand breaks or donor DNA. *Nature* **576**, 149-157 (2019). [Prime editing]
-4. Paquet, D. et al. Efficient introduction of specific homozygous and heterozygous mutations using CRISPR/Cas9. *Nature* **533**, 125-129 (2016). [Cut-to-edit distance]
-5. Ihry, R. J. et al. p53 inhibits CRISPR-Cas9 engineering in human pluripotent stem cells. *Nat. Med.* **24**, 939-946 (2018). [p53 in iPSCs]
-6. Kosicki, M. et al. Repair of double-strand breaks induced by CRISPR-Cas9 leads to large deletions and complex rearrangements. *Nat. Biotechnol.* **36**, 765-771 (2018). [DSB risks]
-7. Iyer, S. et al. Efficient homology-directed repair with circular single-stranded DNA donors. *CRISPR J.* **5**, 685-701 (2022). [cssDNA]
-8. Richards, S. et al. Standards and guidelines for the interpretation of sequence variants. *Genet. Med.* **17**, 405-424 (2015). [ACMG standards]
-9. Arbab, M. et al. Determinants of base editing outcomes from target library analysis and machine learning. *Cell* **182**, 463-480 (2020). [BE outcomes, BE-Hive]
-10. Elliott, B. et al. Gene conversion tracts from double-strand break repair in mammalian cells. *Mol. Cell. Biol.* **18**, 93-101 (1998). [Tract lengths]
-11. Richter, M. F. et al. Phage-assisted evolution of an adenine base editor with improved Cas domain compatibility and activity. *Nat. Biotechnol.* **38**, 883-891 (2020). [ABE8e]
-12. Chen, P. J. et al. Enhanced prime editing systems by manipulating cellular determinants of editing outcomes. *Cell* **184**, 5635-5652 (2021). [PE optimization]
-13. Nelson, J. W. et al. Engineered pegRNAs improve prime editing efficiency. *Nat. Biotechnol.* **40**, 402-410 (2022). [epegRNA]
-14. Chauhan, V. P. et al. Altered DNA repair pathway engagement by engineered CRISPR-Cas9 nucleases. *PNAS* **120**, e2300605120 (2023). [Staggered cuts]
-15. Leibowitz, M. L. et al. Chromothripsis as an on-target consequence of CRISPR-Cas9 genome editing. *Nat. Genet.* **53**, 895-905 (2021). [Translocation risk]
-16. Richardson, C. D. et al. Enhancing homology-directed genome editing by catalytically active and inactive CRISPR-Cas9 using asymmetric donor DNA. *Nat. Biotechnol.* **34**, 339-344 (2016). [Asymmetric donors]
-17. McLaren, W. et al. The Ensembl Variant Effect Predictor. *Genome Biol.* **17**, 122 (2016). [VEP]
-18. Rees, H. A. & Liu, D. R. Base editing: precision chemistry on the genome and transcriptome of living cells. *Nat. Rev. Genet.* **19**, 770-788 (2018). [BE review]
+All references have been web-search verified against PubMed as of 2026-03-30.
+
+| # | Citation | PMID | DOI | Status |
+|---|----------|------|-----|--------|
+| 1 | Komor AC et al. Programmable editing of a target base in genomic DNA without double-stranded DNA cleavage. Nature 533, 420-424 (2016) | 27096365 | 10.1038/nature17946 | VERIFIED |
+| 2 | Gaudelli NM et al. Programmable base editing of A-T to G-C in genomic DNA without DNA cleavage. Nature 551, 464-471 (2017) | 29160308 | 10.1038/nature24644 | VERIFIED |
+| 3 | Anzalone AV et al. Search-and-replace genome editing without double-strand breaks or donor DNA. Nature 576, 149-157 (2019) | 31634902 | 10.1038/s41586-019-1711-4 | VERIFIED |
+| 4 | Paquet D et al. Efficient introduction of specific homozygous and heterozygous mutations using CRISPR/Cas9. Nature 533, 125-129 (2016) | 27120160 | 10.1038/nature17664 | VERIFIED |
+| 5 | Ihry RJ et al. p53 inhibits CRISPR-Cas9 engineering in human pluripotent stem cells. Nat Med 24, 939-946 (2018) | 29892062 | 10.1038/s41591-018-0050-6 | VERIFIED |
+| 6 | Hwang C-L & Yoon K. Multiple Attribute Decision Making: Methods and Applications. Springer-Verlag, Berlin (1981) | Book | ISBN 978-3-540-10558-9 | VERIFIED |
+| 7 | Iyer S et al. Efficient homology-directed repair with circular single-stranded DNA donors. CRISPR J 5, 685-701 (2022) | 36070530 | 10.1089/crispr.2022.0058 | VERIFIED |
+| 8 | Richards S et al. Standards and guidelines for the interpretation of sequence variants. Genet Med 17, 405-424 (2015) | 25741868 | 10.1038/gim.2015.30 | VERIFIED |
+| 9 | Arbab M et al. Determinants of base editing outcomes from target library analysis and machine learning. Cell 182, 463-480.e30 (2020) | 32533916 | 10.1016/j.cell.2020.05.037 | CORRECTED (was Nature) |
+| 10 | Rees HA & Liu DR. Base editing: precision chemistry on the genome and transcriptome of living cells. Nat Rev Genet 19, 770-788 (2018) | 30323312 | 10.1038/s41576-018-0059-1 | VERIFIED |
+| 11 | Richter MF et al. Phage-assisted evolution of an adenine base editor with improved Cas domain compatibility and activity. Nat Biotechnol 38, 883-891 (2020) | 32433547 | 10.1038/s41587-020-0453-z | VERIFIED |
+| 12 | Nishimasu H et al. Engineered CRISPR-Cas9 nuclease with expanded targeting space. Science 361, 1259-1262 (2018) | 30166441 | 10.1126/science.aas9129 | VERIFIED |
+| 13 | Walton RT et al. Unconstrained genome targeting with near-PAMless engineered CRISPR-Cas9 variants. Science 368, 290-296 (2020) | 32217751 | 10.1126/science.aba8853 | CORRECTED (style) |
+| 14 | Acharya S et al. PAM-flexible Engineered FnCas9 variants for robust and ultra-precise genome editing and diagnostics. Nat Commun 15, 5471 (2024) | 38942756 | 10.1038/s41467-024-49233-w | CORRECTED (author/title) |
+| 15 | Doench JG et al. Optimized sgRNA design to maximize activity and minimize off-target effects of CRISPR-Cas9. Nat Biotechnol 34, 184-191 (2016) | 26780180 | 10.1038/nbt.3437 | VERIFIED |
+| 16 | Hsu PD et al. DNA targeting specificity of RNA-guided Cas9 nucleases. Nat Biotechnol 31, 827-832 (2013) | 23873081 | 10.1038/nbt.2647 | VERIFIED |
+| 17 | Koblan LW et al. Improving cytidine and adenine base editors by expression optimization and ancestral reconstruction. Nat Biotechnol 36, 843-846 (2018) | 29813047 | 10.1038/nbt.4172 | VERIFIED |
+| 18 | den Dunnen JT et al. HGVS recommendations for the description of sequence variants: 2016 update. Hum Mutat 37, 564-569 (2016) | 26931183 | 10.1002/humu.22981 | VERIFIED |
+| 19 | Elliott B et al. Gene conversion tracts from double-strand break repair in mammalian cells. Mol Cell Biol 18, 93-101 (1998) | 9418857 | 10.1128/MCB.18.1.93 | VERIFIED |
+| 20 | Concordet J-P & Haeussler M. CRISPOR: intuitive guide selection for CRISPR/Cas9 genome editing experiments and screens. NAR 46, W242-W245 (2018) | 29762716 | 10.1093/nar/gky354 | VERIFIED |
+
+### Additional References Cited in Constants/Documentation
+
+| Citation | PMID | Context |
+|----------|------|---------|
+| Kan Y et al. Genome Res 27, 1316-1326 (2017) | 28356322 | SDSA tract lengths (NOT Mol Cell) |
+| Haapaniemi E et al. Nat Med 24, 927-930 (2018) | 29892067 | p53 selection in iPSCs |
+| Richardson CD et al. Nat Biotechnol 34, 339-344 (2016) | 26789497 | Asymmetric ssODN HDR |
+| Becker KA et al. PNAS 103, 12998-13003 (2006) | 16920795 | iPSC cell cycle |
+| Chauhan VP et al. PNAS 120, e2300605120 (2023) | 37603753 | vCas9 staggered cuts |
+| Opricovic S & Tzeng GH. Eur J Oper Res 156, 445-455 (2004) | -- | VIKOR method |
+| Hirano S et al. Cell 164, 950-961 (2016) | 26919430 | FnCas9 crystal structure |
+| Zetsche B et al. Cell 163, 759-771 (2015) | 26422227 | Cas12a/Cpf1 |
 
 ---
 
-*Document generated: March 2026*
-*CRISPRArchitect version: v2*
-*Total project size: ~35,000 LOC (v1 + v2), 43+ files*
+*End of Complete Project Documentation -- CRISPRArchitect v3.0.0*
+*Document generated: 2026-03-30*
+*Total sections: 16 (including 2 appendices)*

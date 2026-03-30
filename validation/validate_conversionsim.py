@@ -142,14 +142,15 @@ def validation_1_tract_length_distribution() -> Dict:
     synthesis).  The key comparison is whether the overall SHAPE (right-skewed,
     geometric-like) is captured.
 
-    We also compare against Kan et al., Mol Cell 2017, who measured SDSA
-    tracts in human cells and found a median of ~200 bp with a heavy right
-    tail extending to 2+ kb -- closer to what ConversionSim models.
+    We also compare against Kan et al., Genome Res 2017, who measured
+    oligonucleotide-mediated editing tracts. NOTE: Kan et al. studied SSTR
+    (not SDSA) with ODN donors, finding average tracts of ~20 bp. Their
+    data is NOT directly comparable to ConversionSim's long-donor SDSA model.
 
     References
     ----------
     - Elliott B et al., Mol Cell Biol 18:93-101, 1998.  PMID: 9418857
-    - Kan Y et al., Mol Cell 68:127-139, 2017.         PMID: 28943315
+    - Kan Y et al., Genome Res 27:1099-1111, 2017.     PMID: 28356322
     """
     print("\n" + "=" * 70)
     print("  VALIDATION 1: Tract Length Distribution Shape")
@@ -1002,12 +1003,15 @@ def generate_report(results: Dict[str, Dict]) -> str:
     **Assessment:** {v1_status}
 
     The model predicts longer tracts than Elliott 1998, which is expected because:
-    1. Elliott used endogenous chromosomal donors (sister chromatid), while
-       ConversionSim models exogenous donor HDR with longer D-loop synthesis.
+    1. Elliott used endogenous chromosomal substrates (I-SceI reporter system),
+       where 80% of tracts were <=58 bp. ConversionSim models exogenous
+       long-donor HDR (cssDNA/dsDNA) via SDSA, which supports longer synthesis.
     2. The SDSA geometric model (p=0.002/bp, mean~500 bp) is consistent with
-       Kan et al. (Mol Cell, 2017) who measured SDSA tracts of 200-2000 bp
-       in human cells with exogenous donors.
+       functional evidence: successful HDR with 300-1000 bp homology arms,
+       and the Stark lab SDSA assay (G3, 2017) confirming >=350 bp synthesis.
     3. The qualitative shape (right-skewed, geometric/exponential-like) matches.
+    NOTE: Kan et al. (Genome Res, 2017) is NOT a valid comparator -- it
+    measured ODN/SSTR tracts (~20 bp average), not SDSA with long donors.
 
     ![Validation 1](figures/validation1_tract_distribution.png)
 

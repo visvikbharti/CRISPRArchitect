@@ -597,12 +597,17 @@ class CohesinExtruder:
         """
         results: List[ExtrusionResult] = []
 
-        for i in range(n_simulations):
-            if seed is not None:
-                rng = np.random.default_rng(seed + i)
-            else:
-                rng = np.random.default_rng()
+        # Use SeedSequence spawning for independent streams (numpy best practice).
+        # Previous approach (seed + i) produces structurally correlated streams
+        # in some PRNGs. SeedSequence.spawn() guarantees independence.
+        if seed is not None:
+            ss = np.random.SeedSequence(seed)
+            child_seeds = ss.spawn(n_simulations)
+        else:
+            child_seeds = [None] * n_simulations
 
+        for i in range(n_simulations):
+            rng = np.random.default_rng(child_seeds[i])
             result = self.extrude(fiber, dsb_position_bp, rng=rng)
             results.append(result)
 
@@ -847,7 +852,7 @@ class CohesinExtruder:
             right_boundaries_bp=rights,
             mean_domain_size_bp=float(np.mean(domains)),
             median_domain_size_bp=float(np.median(domains)),
-            std_domain_size_bp=float(np.std(domains)),
+            std_domain_size_bp=float(np.std(domains, ddof=1)),
             fraction_left_stalled_ctcf=sum(
                 1 for r in results if r.left_stalled_at_ctcf
             )

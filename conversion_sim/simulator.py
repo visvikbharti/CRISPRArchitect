@@ -191,6 +191,33 @@ class ConversionSimulator:
     ... )
     >>> results = sim.run()
     >>> sim.summary()
+
+    Scope and limitations
+    ---------------------
+    This simulator models the **SDSA (Synthesis-Dependent Strand Annealing)**
+    pathway, which is the dominant HDR mechanism for long-donor templates
+    (cssDNA, lssDNA, dsDNA) in mitotic mammalian cells.
+
+    **What this model IS valid for:**
+    - Gene conversion tract predictions with cssDNA donors (Iyer et al., 2022)
+    - Gene conversion tract predictions with dsDNA/lssDNA donors (Elliott et al., 1998)
+    - Relative comparisons between donor topologies and cut geometries
+    - Staggered-cut enhancement estimation (Chauhan et al., 2023)
+
+    **What this model is NOT valid for:**
+    - ssODN-mediated editing, which primarily proceeds via SSTR
+      (Single-Strand Template Repair), a RAD51-independent pathway
+      (Richardson et al., Nat Biotechnol, 2016; Gallagher & Bhatt, 2018).
+      SSTR produces much shorter incorporation tracts (~20-50 bp from the
+      nick site) than SDSA (~200-700 bp). The model systematically
+      over-predicts ssODN incorporation (R² = -0.56 vs. Paquet et al., 2016).
+    - Prime editing outcomes (PE uses a fundamentally different RT-based
+      mechanism, not strand invasion).
+
+    This limitation is by design: the SDSA model is parameterized for the
+    biology of long-donor HDR, and attempting to model SSTR with the same
+    framework would be scientifically unsound. A dedicated SSTR sub-model
+    is a planned future extension.
     """
 
     def __init__(
@@ -494,7 +521,12 @@ class ConversionSimulator:
 
         return self._results
 
-    def probability_at_distance(self, distance_bp: float) -> float:
+    def probability_at_distance(
+        self,
+        distance_bp: float,
+        return_ci: bool = False,
+        ci_level: float = 0.95,
+    ):
         """Probability that the conversion tract extends at least *distance_bp*.
 
         This answers the question: "If I place a donor-encoded edit
@@ -504,18 +536,24 @@ class ConversionSimulator:
 
         The answer is computed empirically from the Monte Carlo results:
         among all simulations where HDR succeeded, what fraction had a
-        tract length ≥ *distance_bp*?
+        tract length >= *distance_bp*?
 
         Parameters
         ----------
         distance_bp : float
             Distance from the cut site to the edit of interest, in bp.
+        return_ci : bool
+            If True, return a tuple (estimate, ci_low, ci_high) instead
+            of a single float. Uses the Wilson score interval for the
+            binomial proportion (more accurate than Wald for small p or n).
+        ci_level : float
+            Confidence level for the interval (default 0.95).
 
         Returns
         -------
-        float
-            Fraction of HDR-successful simulations with tract ≥ distance_bp.
-            Returns 0.0 if no HDR events occurred.
+        float or tuple of (float, float, float)
+            Point estimate, or (estimate, ci_low, ci_high) if return_ci=True.
+            Returns 0.0 (or (0.0, 0.0, 0.0)) if no HDR events occurred.
 
         Raises
         ------
@@ -525,15 +563,33 @@ class ConversionSimulator:
         if self._results is None:
             raise RuntimeError("Call run() before querying results.")
 
-        # Consider only HDR-successful simulations.
         successful_tracts = self._results.tract_lengths_bp[
             self._results.hdr_success
         ]
         if len(successful_tracts) == 0:
-            return 0.0
+            return (0.0, 0.0, 0.0) if return_ci else 0.0
 
-        # Fraction with tract >= distance_bp
-        return float(np.mean(successful_tracts >= distance_bp))
+        n = len(successful_tracts)
+        k = int(np.sum(successful_tracts >= distance_bp))
+        p_hat = k / n
+
+        if not return_ci:
+            return float(p_hat)
+
+        # Wilson score interval for binomial proportion
+        # More accurate than Wald (p_hat +/- z*SE) for small p or small n
+        from scipy.stats import norm
+        z = norm.ppf(1.0 - (1.0 - ci_level) / 2.0)
+        z2 = z * z
+        denom = 1.0 + z2 / n
+        centre = (p_hat + z2 / (2.0 * n)) / denom
+        half_width = (z / denom) * np.sqrt(
+            p_hat * (1.0 - p_hat) / n + z2 / (4.0 * n * n)
+        )
+        ci_low = max(0.0, centre - half_width)
+        ci_high = min(1.0, centre + half_width)
+
+        return (float(p_hat), float(ci_low), float(ci_high))
 
     def plot_tract_distribution(self, ax=None, show: bool = True):
         """Plot a histogram of gene conversion tract lengths.
@@ -659,18 +715,19 @@ class ConversionSimulator:
         return ax
 
     def summary(self) -> Dict[str, float]:
-        """Print and return key statistics from the simulation.
+        """Print and return key statistics with standard errors and 95% CIs.
 
         This method provides a comprehensive summary including:
-        - HDR success rate (fraction of all simulations)
-        - Mean, median, and 95th percentile tract lengths
-        - Probability of donor incorporation at key distances from the cut
+        - HDR success rate with binomial SE and 95% Wilson CI
+        - Mean tract length with SE (= std / sqrt(n)) and 95% CI
+        - Median and percentile tract lengths
+        - Probability of donor incorporation at key distances with 95% CIs
         - Resection and filament statistics
 
         Returns
         -------
         dict
-            Dictionary of summary statistics.
+            Dictionary of summary statistics including *_se and *_ci_* keys.
 
         Raises
         ------
@@ -683,30 +740,50 @@ class ConversionSimulator:
         res = self._results
         successful_tracts = res.tract_lengths_bp[res.hdr_success]
 
-        # ---- Compute statistics ----
+        # ---- Compute statistics with uncertainty ----
         stats: Dict[str, float] = {}
 
         stats["n_simulations"] = res.n_simulations
         stats["n_hdr_success"] = int(np.sum(res.hdr_success))
-        stats["hdr_success_rate"] = float(np.mean(res.hdr_success))
+
+        # HDR rate with binomial standard error
+        p_hdr = float(np.mean(res.hdr_success))
+        n_total = res.n_simulations
+        stats["hdr_success_rate"] = p_hdr
+        se_hdr = float(np.sqrt(p_hdr * (1.0 - p_hdr) / max(1, n_total)))
+        stats["hdr_rate_se"] = se_hdr
+        stats["hdr_rate_ci95_low"] = max(0.0, p_hdr - 1.96 * se_hdr)
+        stats["hdr_rate_ci95_high"] = min(1.0, p_hdr + 1.96 * se_hdr)
 
         if len(successful_tracts) > 0:
-            stats["tract_mean_bp"] = float(np.mean(successful_tracts))
+            n_hdr = len(successful_tracts)
+            mean_tract = float(np.mean(successful_tracts))
+            # Use ddof=1 for sample standard deviation
+            std_tract = float(np.std(successful_tracts, ddof=1))
+            se_mean = std_tract / np.sqrt(n_hdr)
+
+            stats["tract_mean_bp"] = mean_tract
+            stats["tract_std_bp"] = std_tract
+            stats["tract_mean_se_bp"] = float(se_mean)
+            stats["tract_mean_ci95_low"] = mean_tract - 1.96 * se_mean
+            stats["tract_mean_ci95_high"] = mean_tract + 1.96 * se_mean
             stats["tract_median_bp"] = float(np.median(successful_tracts))
-            stats["tract_std_bp"] = float(np.std(successful_tracts))
             stats["tract_p5_bp"] = float(np.percentile(successful_tracts, 5))
             stats["tract_p95_bp"] = float(np.percentile(successful_tracts, 95))
 
-            # Probability at key distances
+            # Probability at key distances with Wilson 95% CIs
             for dist in [100, 200, 300, 500, 800, 1000, 1500, 2000]:
-                key = f"p_conversion_at_{dist}bp"
-                stats[key] = float(np.mean(successful_tracts >= dist))
+                p_est, ci_lo, ci_hi = self.probability_at_distance(
+                    dist, return_ci=True
+                )
+                stats[f"p_conversion_at_{dist}bp"] = p_est
+                stats[f"p_conversion_at_{dist}bp_ci95_low"] = ci_lo
+                stats[f"p_conversion_at_{dist}bp_ci95_high"] = ci_hi
         else:
-            stats["tract_mean_bp"] = 0.0
-            stats["tract_median_bp"] = 0.0
-            stats["tract_std_bp"] = 0.0
-            stats["tract_p5_bp"] = 0.0
-            stats["tract_p95_bp"] = 0.0
+            for k in ("tract_mean_bp", "tract_std_bp", "tract_mean_se_bp",
+                       "tract_mean_ci95_low", "tract_mean_ci95_high",
+                       "tract_median_bp", "tract_p5_bp", "tract_p95_bp"):
+                stats[k] = 0.0
 
         # Resection statistics
         stats["resection_left_mean_bp"] = float(np.mean(res.resection_left_bp))
@@ -715,9 +792,9 @@ class ConversionSimulator:
         stats["invasion_success_rate"] = float(np.mean(res.invasion_success))
 
         # ---- Print human-readable summary ----
-        print("=" * 65)
+        print("=" * 70)
         print("  ConversionSim — Monte Carlo HDR Simulation Summary")
-        print("=" * 65)
+        print("=" * 70)
         print(f"  Configuration:")
         print(f"    Cut type:          {self.cut_type}")
         if self.cut_type == "staggered_5prime":
@@ -726,35 +803,43 @@ class ConversionSimulator:
         print(f"    Homology arms:     {self.homology_arm_length} bp each")
         print(f"    Cell type:         {self.cell_type}")
         print(f"    Simulations:       {res.n_simulations:,}")
-        print("-" * 65)
+        print("-" * 70)
         print(f"  HDR Outcomes:")
-        print(f"    HDR success rate:  {stats['hdr_success_rate'] * 100:.1f}%"
-              f"  ({stats['n_hdr_success']:,} / {res.n_simulations:,})")
+        print(f"    HDR success rate:  {p_hdr * 100:.1f}% "
+              f"(95% CI: [{stats['hdr_rate_ci95_low'] * 100:.1f}%, "
+              f"{stats['hdr_rate_ci95_high'] * 100:.1f}%])")
         print(f"    Invasion success:  {stats['invasion_success_rate'] * 100:.1f}%")
-        print("-" * 65)
+        print("-" * 70)
 
         if len(successful_tracts) > 0:
-            print(f"  Tract Length Statistics (among HDR-successful cells):")
-            print(f"    Mean:              {stats['tract_mean_bp']:.0f} bp")
-            print(f"    Median:            {stats['tract_median_bp']:.0f} bp")
-            print(f"    Std dev:           {stats['tract_std_bp']:.0f} bp")
-            print(f"    5th percentile:    {stats['tract_p5_bp']:.0f} bp")
-            print(f"    95th percentile:   {stats['tract_p95_bp']:.0f} bp")
-            print("-" * 65)
-            print(f"  Conversion Probability at Distance from Cut:")
+            print(f"  Tract Length Statistics (n={len(successful_tracts):,} HDR events):")
+            print(f"    Mean:    {stats['tract_mean_bp']:.0f} bp "
+                  f"(SE={stats['tract_mean_se_bp']:.1f}, "
+                  f"95% CI: [{stats['tract_mean_ci95_low']:.0f}, "
+                  f"{stats['tract_mean_ci95_high']:.0f}])")
+            print(f"    Median:  {stats['tract_median_bp']:.0f} bp")
+            print(f"    Std dev: {stats['tract_std_bp']:.0f} bp (sample, ddof=1)")
+            print(f"    5th pct: {stats['tract_p5_bp']:.0f} bp")
+            print(f"    95th pct:{stats['tract_p95_bp']:.0f} bp")
+            print("-" * 70)
+            print(f"  Conversion Probability at Distance (with 95% Wilson CI):")
             for dist in [100, 200, 300, 500, 800, 1000, 1500, 2000]:
                 key = f"p_conversion_at_{dist}bp"
                 if key in stats:
-                    bar_len = int(stats[key] * 30)
+                    p = stats[key]
+                    lo = stats[f"{key}_ci95_low"]
+                    hi = stats[f"{key}_ci95_high"]
+                    bar_len = int(p * 30)
                     bar = "#" * bar_len + "." * (30 - bar_len)
-                    print(f"    {dist:>5d} bp:  [{bar}]  {stats[key] * 100:5.1f}%")
+                    print(f"    {dist:>5d} bp:  [{bar}]  "
+                          f"{p * 100:5.1f}% [{lo * 100:.1f}-{hi * 100:.1f}%]")
         else:
             print("  No HDR events occurred in this simulation.")
 
-        print("-" * 65)
+        print("-" * 70)
         print(f"  Resection (mean):    L={stats['resection_left_mean_bp']:.0f} bp"
               f"  R={stats['resection_right_mean_bp']:.0f} bp")
         print(f"  Filament (mean):     {stats['filament_mean_nt']:.0f} nt")
-        print("=" * 65)
+        print("=" * 70)
 
         return stats

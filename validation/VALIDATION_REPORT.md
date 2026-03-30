@@ -47,7 +47,7 @@ The model predicts longer tracts than Elliott 1998, which is expected because:
 1. Elliott used endogenous chromosomal donors (sister chromatid), while
    ConversionSim models exogenous donor HDR with longer D-loop synthesis.
 2. The SDSA geometric model (p=0.002/bp, mean~500 bp) is consistent with
-   Kan et al. (Mol Cell, 2017) who measured SDSA tracts of 200-2000 bp
+   Kan et al. (Genome Res, 2017) who measured SDSA tracts of 200-2000 bp
    in human cells with exogenous donors.
 3. The qualitative shape (right-skewed, geometric/exponential-like) matches.
 
@@ -101,6 +101,26 @@ preferably (b) a separate SSTR sub-model. The latter is biologically more
 accurate and is a recommended future extension.
 
 ![Validation 2](figures/validation2_distance_incorporation.png)
+
+#### Scope Restriction (added 2026-03-30)
+
+Based on the poor fit to Paquet et al. (2016) ssODN data, ConversionSim's
+SDSA model is **explicitly restricted to long-donor scenarios** (cssDNA,
+lssDNA, dsDNA donors with homology arms ≥100 bp). ssODN-mediated editing
+proceeds primarily via SSTR (Single-Strand Template Repair), a
+mechanistically distinct pathway that is NOT modeled by ConversionSim.
+
+This is not a model failure — it is a scope boundary. The SDSA pathway
+(resection → RAD51 filament → strand invasion → D-loop synthesis) is
+biologically irrelevant for ssODN templates, which are incorporated via
+SSTR (PCNA-dependent, RAD51-independent, Fanconi anemia pathway-mediated).
+Modeling ssODN with an SDSA framework would be scientifically incorrect.
+
+**Recommendation:** Do not use ConversionSim to predict ssODN incorporation
+distances. For ssODN design, use the empirical distance-decay relationship
+from Paquet et al. (2016) directly: incorporation probability drops
+exponentially with distance from the nick site, with ~50% incorporation
+at 10-20 bp and <5% at 50+ bp.
 
 ---
 

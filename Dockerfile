@@ -16,7 +16,7 @@ FROM python:3.11-slim
 # Metadata
 LABEL maintainer="CRISPRArchitect Team"
 LABEL description="Multi-site genome editing strategy optimizer"
-LABEL version="0.1.0"
+LABEL version="3.0.0"
 
 # Avoid Python buffering issues in Docker
 ENV PYTHONUNBUFFERED=1

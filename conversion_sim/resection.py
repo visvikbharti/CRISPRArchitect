@@ -110,12 +110,17 @@ _LONG_RESECTION_MU_LOG: float = float(np.log(_LONG_RESECTION_MEDIAN_BP))
 _LONG_RESECTION_SIGMA_LOG: float = 0.8  # unitless; controls tail weight
 
 # Stagger-induced boost to long-range resection (fractional).
-# A 5' overhang stimulates EXO1 loading, increasing processive resection
-# by approximately 20 %.
-# Source: inferred from Cannavo et al., Mol Cell 2013 (in vitro EXO1
-#         stimulation on 5'-flap substrates) and Chauhan et al., PNAS 2023
-#         (enhanced HDR with vCas9 staggered cuts).
-_STAGGER_LONG_RANGE_BOOST: float = 0.20  # 20 % increase
+# [ASSUMED] A 5' overhang stimulates EXO1 loading, increasing processive
+# resection by approximately 20%.
+# Rationale: Cannavo et al. (Mol Cell, 2013) showed EXO1 preferentially
+# processes 5'-flap substrates in vitro (Fig 3), but did not quantify a
+# specific processivity increase. Chauhan et al. (PNAS, 2023) showed vCas9
+# (6 bp stagger) achieves 1.9x HDR enhancement, part of which may be
+# mediated by enhanced resection. The 20% boost is a qualitative estimate
+# of the resection component; the remainder is attributed to D-loop
+# stability (modeled in synthesis.py). This parameter should be explored
+# in sensitivity analyses.
+_STAGGER_LONG_RANGE_BOOST: float = 0.20
 
 
 @dataclass
