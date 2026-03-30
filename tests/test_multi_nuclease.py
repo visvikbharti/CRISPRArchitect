@@ -10,7 +10,7 @@ References
 Richter et al., Nat Biotechnol, 2020 (ABE8e window: 3-9)
 Nishimasu et al., Science, 2018 (SpCas9-NG: NG PAM)
 Walton et al., Science, 2020 (SpRY: near-PAMless)
-Chakraborty et al., Nat Commun, 2024 (enFnCas9: NRG PAM)
+Acharya et al., Nat Commun 15:5471, 2024 (enFnCas9: NRG PAM)
 """
 
 from __future__ import annotations

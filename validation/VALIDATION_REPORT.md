@@ -254,6 +254,6 @@ biological variability.
    circular single-stranded DNA donors. *CRISPR J* 5:685-701, 2022.
 4. Chauhan VP, Sharp PA, Bhatt DL. Altered DNA repair pathway engagement by
    engineered CRISPR-Cas9 nucleases. *PNAS* 120:e2300605120, 2023.
-5. Kan Y, Ruis B, Taber S, Hendrickson EA. Comparative analysis of sequence
-   features involved in the selection of gene conversion tracts from SDSA and
-   dHJ resolution. *Mol Cell* 68:127-139, 2017.
+5. Kan Y, Ruis B, Takasugi T, Hendrickson EA. Mechanisms of precise genome
+   editing using oligonucleotide donors. *Genome Res* 27:1099-1111, 2017.
+   PMID: 28356322.

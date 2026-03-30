@@ -191,6 +191,37 @@ def add_stat_box(slide, left, top, width, height, value, label,
 
 
 # ===========================================================================
+# Figure paths (all generated from real data)
+# ===========================================================================
+FIG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                       'figures', 'v3')
+
+def get_fig(name):
+    """Return path to a figure PNG if it exists, else None."""
+    path = os.path.join(FIG_DIR, name)
+    if os.path.exists(path):
+        return path
+    print(f"  WARNING: Figure not found: {path}")
+    return None
+
+
+def add_figure(slide, fig_name, left, top, width=None, height=None):
+    """Add a figure image to a slide if it exists."""
+    path = get_fig(fig_name)
+    if path:
+        kwargs = {}
+        if width:
+            kwargs['width'] = width
+        if height:
+            kwargs['height'] = height
+        if not kwargs:
+            kwargs['width'] = Inches(5.5)
+        slide.shapes.add_picture(path, left, top, **kwargs)
+        return True
+    return False
+
+
+# ===========================================================================
 # Build presentation
 # ===========================================================================
 prs = Presentation()
@@ -551,19 +582,21 @@ add_textbox(slide, Inches(1.0), Inches(1.9), Inches(11.2), Inches(1.0),
             "(v2 was: BE 0% | PE 97% | HDR 3%)",
             font_size=20, color=GREEN_ACC, bold=True, alignment=PP_ALIGN.CENTER)
 
-# Stat boxes
-add_stat_box(slide, Inches(0.7), Inches(3.8), Inches(3.5), Inches(1.3),
-             "6/30", "BE Top-Ranked (v3)", GREEN_ACC)
-add_stat_box(slide, Inches(4.9), Inches(3.8), Inches(3.5), Inches(1.3),
-             "0/30", "BE Top-Ranked (v2)", RED_ACCENT)
-add_stat_box(slide, Inches(9.1), Inches(3.8), Inches(3.5), Inches(1.3),
-             "86.7%", "Top-1 Accuracy", TEAL)
+# Strategy distribution figure (real data)
+add_figure(slide, 'Fig_StrategyDistribution_v2_v3.png',
+           Inches(0.7), Inches(3.3), width=Inches(6.5), height=Inches(3.5))
 
-add_bullet_list(slide, Inches(0.7), Inches(5.5), Inches(11.5), Inches(1.5), [
-    "Primary drivers: ABE8e broader window (3-9) and enFnCas9 NRG PAM",
-    "PE still dominates (23/30) — this is correct, not a bias",
-    ("Critical bug fixed: bystander severity was triple-counted in v2 scoring", CORAL, True),
-], font_size=15, line_spacing=1.5, bullet_color=GREEN_ACC)
+# Key stats on the right
+add_stat_box(slide, Inches(7.8), Inches(3.5), Inches(2.3), Inches(1.0),
+             "6/30", "BE v3", GREEN_ACC)
+add_stat_box(slide, Inches(10.3), Inches(3.5), Inches(2.3), Inches(1.0),
+             "0/30", "BE v2", RED_ACCENT)
+add_textbox(slide, Inches(7.8), Inches(5.0), Inches(4.8), Inches(1.5),
+            "Primary drivers:\n"
+            "  ABE8e broader window (3-9)\n"
+            "  enFnCas9 NRG PAM\n"
+            "Bug fixed: bystander triple-count",
+            font_size=13, color=LIGHT_GRAY)
 
 add_slide_number(slide, 11)
 
@@ -644,6 +677,10 @@ add_multiline(slide, Inches(7.0), Inches(2.4), Inches(5.4), Inches(3.0), [
     ("All 3 MCDM methods agree: 100%", TEAL, True),
     ("concordance (TOPSIS, VIKOR, WPM)", TEAL, False),
 ], font_size=14, line_spacing=1.3)
+
+# Bystander fix figure (inset, lower right area)
+add_figure(slide, 'Fig_BystanterFix.png',
+           Inches(6.5), Inches(4.5), width=Inches(6.2), height=Inches(2.7))
 
 add_slide_number(slide, 13)
 
@@ -740,6 +777,10 @@ add_textbox(slide, Inches(2.5), Inches(5.4), Inches(8.3), Inches(1.0),
             "choice of MCDM algorithm.",
             font_size=15, color=WHITE, alignment=PP_ALIGN.CENTER)
 
+# Cross-method figure (replaces the green box)
+add_figure(slide, 'Fig_CrossMethod_Agreement.png',
+           Inches(2.0), Inches(4.3), width=Inches(9.3), height=Inches(2.8))
+
 add_slide_number(slide, 16)
 
 
@@ -778,6 +819,10 @@ add_multiline(slide, Inches(6.7), Inches(2.2), Inches(5.9), Inches(4.5), [
     ("", WHITE, False),
     ("n = 10,000 simulations, seed = 42", DARK_GRAY, False),
 ], font_size=13, line_spacing=1.25)
+
+# ConversionSim CI figure (replaces the card with example data)
+add_figure(slide, 'Fig_ConversionSim_CIs.png',
+           Inches(0.5), Inches(3.8), width=Inches(12.3), height=Inches(3.5))
 
 add_slide_number(slide, 17)
 
@@ -908,6 +953,10 @@ for i, (param, tag, source) in enumerate(params):
     add_textbox(slide, Inches(7.4), y, Inches(5.0), Inches(0.3),
                 source, font_size=10, color=DARK_GRAY)
 
+# Parameter provenance pie chart (top right)
+add_figure(slide, 'Fig_ParameterProvenance.png',
+           Inches(8.5), Inches(1.5), width=Inches(4.3), height=Inches(4.3))
+
 add_slide_number(slide, 20)
 
 
@@ -947,6 +996,10 @@ add_multiline(slide, Inches(7.0), Inches(2.2), Inches(5.4), Inches(3.5), [
     ("SEs/CIs on all outputs", CORAL, False),
     ("All 20 references web-verified", CORAL, False),
 ], font_size=14, line_spacing=1.3)
+
+# Literature benchmark figure (bottom center)
+add_figure(slide, 'Fig_LiteratureBenchmark.png',
+           Inches(0.5), Inches(5.0), width=Inches(12.3), height=Inches(2.3))
 
 add_slide_number(slide, 21)
 

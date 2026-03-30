@@ -161,7 +161,7 @@ class BaseEditingEngine:
     Richter et al., Nat Biotechnol, 2020 (ABE8e improved efficiency)
     Nishimasu et al., Science, 2018 (SpCas9-NG)
     Walton et al., Science, 2020 (SpRY near-PAMless)
-    Chakraborty et al., Nat Commun, 2024 (enFnCas9)
+    Acharya et al., Nat Commun 15:5471, 2024 (enFnCas9)
     """
 
     def __init__(self, pam_scanner: EnhancedPAMScanner) -> None:

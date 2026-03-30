@@ -44,7 +44,7 @@ GRAY = '#95A5A6'
 DARK = '#2C3E50'
 
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                          'figures', 'v3_results')
+                          'figures', 'v3')
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
