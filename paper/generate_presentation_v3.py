@@ -236,7 +236,7 @@ set_slide_bg(slide, BG_DARKER)
 add_accent_line(slide, Inches(0), Inches(0), SLIDE_W, TEAL, Inches(0.06))
 
 add_textbox(slide, Inches(1.0), Inches(1.3), Inches(11.3), Inches(1.5),
-            "CRISPRArchitect v3", font_size=52, color=WHITE, bold=True)
+            "CRISPRArchitect", font_size=52, color=WHITE, bold=True)
 add_textbox(slide, Inches(1.0), Inches(2.5), Inches(11.3), Inches(1.2),
             "Multi-Nuclease Decision Support for\nGenome Editing Strategy Design",
             font_size=26, color=TEAL)
@@ -254,12 +254,12 @@ add_textbox(slide, Inches(1.0), Inches(5.15), Inches(11.3), Inches(0.5),
 add_textbox(slide, Inches(1.0), Inches(5.6), Inches(11.3), Inches(0.5),
             "Lab Meeting  |  April 2026", font_size=16, color=DARK_GRAY)
 
-# Version badges
-for i, (ver, col) in enumerate([("v1", DARK_GRAY), ("v2", TEAL), ("v3", CORAL)]):
-    x = Inches(9.0) + Inches(i * 1.6)
-    add_card(slide, x, Inches(5.8), Inches(1.3), Inches(0.5), BG_CARD)
-    add_textbox(slide, x, Inches(5.85), Inches(1.3), Inches(0.4),
-                ver, font_size=16, color=col, bold=True, alignment=PP_ALIGN.CENTER)
+# Feature badges (instead of version badges)
+for i, (tag, col) in enumerate([("5 Nucleases", TEAL), ("TOPSIS 6D", CORAL), ("224 Tests", GOLD)]):
+    x = Inches(8.5) + Inches(i * 1.7)
+    add_card(slide, x, Inches(5.8), Inches(1.4), Inches(0.5), BG_CARD)
+    add_textbox(slide, x, Inches(5.85), Inches(1.4), Inches(0.4),
+                tag, font_size=14, color=col, bold=True, alignment=PP_ALIGN.CENTER)
 
 add_slide_number(slide, 1)
 
@@ -342,10 +342,10 @@ else:
 add_slide_number(slide, 4)
 
 
-# ---- SLIDE 5: v1 Foundation ------------------------------------------------
+# ---- SLIDE 5: Simulation Foundation ----------------------------------------
 slide = prs.slides.add_slide(blank_layout)
 set_slide_bg(slide)
-add_title_bar(slide, "v1 Foundation: 6 Simulation Modules",
+add_title_bar(slide, "Biophysical Simulation Modules",
               "~24,000 lines of code | Monte Carlo biophysical simulations")
 
 modules = [
@@ -372,25 +372,25 @@ for i, (name, desc, method) in enumerate(modules):
 add_slide_number(slide, 5)
 
 
-# ---- SLIDE 6: v2 Recap -----------------------------------------------------
+# ---- SLIDE 6: Initial Analysis with SpCas9 Only ---------------------------
 slide = prs.slides.add_slide(blank_layout)
 set_slide_bg(slide)
-add_title_bar(slide, "v2: Transcript-Aware Pipeline",
-              "~9,400 LOC | 30 ClinVar benchmark cases | 123 tests")
+add_title_bar(slide, "Initial Analysis: SpCas9-Only Benchmark",
+              "30 ClinVar cases | Transcript-aware pipeline | GRCh38 coordinates")
 
 add_bullet_list(slide, Inches(0.7), Inches(1.5), Inches(5.5), Inches(4.5), [
     "Ensembl REST API integration (GRCh38 coordinates)",
     "Reference allele validation against genome sequence",
     "Coding consequence annotation (ACMG standards)",
     "PAM-verified feasibility: BE, PE, HDR engines",
-    "Weighted-sum scoring with consequence adjustments",
+    "Scored with weighted-sum across 5 dimensions",
     "30-case ClinVar benchmark: 86.7% top-1 accuracy",
 ], font_size=16, line_spacing=1.5)
 
-# v2 result highlight
+# SpCas9-only result highlight
 add_card(slide, Inches(7.0), Inches(1.5), Inches(5.5), Inches(5.0))
 add_textbox(slide, Inches(7.2), Inches(1.7), Inches(5.1), Inches(0.4),
-            "v2 Benchmark Results", font_size=18, color=TEAL, bold=True)
+            "SpCas9-Only Results", font_size=18, color=TEAL, bold=True)
 add_multiline(slide, Inches(7.2), Inches(2.3), Inches(5.1), Inches(3.5), [
     ("Top-1 accuracy: 86.7% (26/30)", WHITE, True),
     ("Top-3 accuracy: 96.7% (29/30)", WHITE, False),
@@ -407,13 +407,13 @@ add_multiline(slide, Inches(7.2), Inches(2.3), Inches(5.1), Inches(3.5), [
 add_slide_number(slide, 6)
 
 
-# ---- SLIDE 7: v2 Key Finding -----------------------------------------------
+# ---- SLIDE 7: Key Finding --------------------------------------------------
 slide = prs.slides.add_slide(blank_layout)
 set_slide_bg(slide, RGBColor(0x15, 0x1E, 0x2B))
-add_coral_banner(slide, "v2 KEY FINDING")
+add_coral_banner(slide, "KEY FINDING")
 
 add_title_bar(slide, "PAM-Window Is the Real Bottleneck",
-              "The most important result from v2")
+              "The most important finding from our SpCas9-only analysis")
 
 add_card(slide, Inches(0.7), Inches(1.7), Inches(11.8), Inches(2.0),
          RGBColor(0x2A, 0x15, 0x10))
@@ -428,22 +428,22 @@ add_textbox(slide, Inches(1.0), Inches(2.7), Inches(11.2), Inches(0.5),
 add_bullet_list(slide, Inches(0.7), Inches(4.2), Inches(11.5), Inches(2.5), [
     "A>G does NOT mean ABE will work at that locus",
     "The PAM must position the target A at protospacer position 4-7 (ABE7.10)",
-    "This motivated v3: broader PAM nucleases + wider editing windows",
+    "This motivated expanding to multiple nucleases + wider editing windows",
 ], font_size=16, line_spacing=1.5, bullet_color=CORAL)
 
 add_slide_number(slide, 7)
 
 
-# ---- SLIDE 8: v3 What's New ------------------------------------------------
+# ---- SLIDE 8: Core Innovations ---------------------------------------------
 slide = prs.slides.add_slide(blank_layout)
 set_slide_bg(slide)
-add_coral_banner(slide, "VERSION 3.0")
+add_coral_banner(slide, "CORE INNOVATIONS")
 
-add_title_bar(slide, "What's New in v3?",
-              "Three major capabilities + scientific rigor overhaul")
+add_title_bar(slide, "Three Key Technical Contributions",
+              "Multi-nuclease evaluation + principled scoring + statistical rigor")
 
 cols = [
-    ("Multi-Nuclease\nEngine", "5 nucleases × 9 editor profiles\n(3 Tier A + 6 Tier B fusions)\nrescued BE: 0/30 → 6/30",
+    ("Multi-Nuclease\nEngine", "5 nucleases × 9 editor profiles\n(3 Tier A + 6 Tier B fusions)\nBE rescued at 6/30 loci",
      TEAL, Inches(0.7)),
     ("TOPSIS 6D\n+ Pareto", "6-dimension ranking\n+ weight-independent\nPareto dominance analysis",
      CORAL, Inches(4.9)),
@@ -502,7 +502,8 @@ for i, (name, pam, stag, mult, ref) in enumerate(nucleases):
 
 add_textbox(slide, Inches(0.7), Inches(4.5), Inches(11.5), Inches(0.4),
             "* enFnCas9 stagger is [ASSUMED] — not directly measured. "
-            "HDR multiplier is [ASSUMED]. See parameter provenance.",
+            "HDR multiplier is [ASSUMED]. "
+            "** ABE8e-enFnCas9 and BE4max-enFnCas9 are Tier B (extrapolated from components; no published fusion data).",
             font_size=11, color=DARK_GRAY)
 
 # Editor summary
@@ -517,13 +518,13 @@ add_multiline(slide, Inches(0.7), Inches(5.55), Inches(4.0), Inches(1.5), [
 ], font_size=12, line_spacing=1.2)
 add_multiline(slide, Inches(4.8), Inches(5.55), Inches(4.0), Inches(1.5), [
     ("Tier B (nuclease fusions — ABE):", CORAL, True),
-    ("ABE8e + enFnCas9: NRG PAM", CORAL, False),
+    ("ABE8e + enFnCas9: NRG PAM **", CORAL, False),
     ("ABE8e + SpCas9-NG: NG PAM", WHITE, False),
     ("ABE8e + SpRY: near-PAMless", WHITE, False),
 ], font_size=12, line_spacing=1.2)
 add_multiline(slide, Inches(8.8), Inches(5.55), Inches(4.0), Inches(1.5), [
     ("Tier B (nuclease fusions — CBE):", CORAL, True),
-    ("BE4max + enFnCas9: NRG PAM", CORAL, False),
+    ("BE4max + enFnCas9: NRG PAM **", CORAL, False),
     ("BE4max + SpCas9-NG: NG PAM", WHITE, False),
     ("BE4max + SpRY: near-PAMless", WHITE, False),
 ], font_size=12, line_spacing=1.2)
@@ -578,7 +579,7 @@ add_title_bar(slide, "How Multi-Nuclease Rescues Base Editing",
 # Before vs After
 add_card(slide, Inches(0.7), Inches(1.5), Inches(5.6), Inches(5.0))
 add_textbox(slide, Inches(0.9), Inches(1.6), Inches(5.2), Inches(0.4),
-            "v2 (SpCas9 + ABE7.10 only)", font_size=18, color=RED_ACCENT, bold=True)
+            "SpCas9 + ABE7.10 only", font_size=18, color=RED_ACCENT, bold=True)
 add_multiline(slide, Inches(0.9), Inches(2.2), Inches(5.2), Inches(3.5), [
     ("PAM: NGG only (~8% of positions)", WHITE, False),
     ("Window: positions 4-7 (4 nt)", WHITE, False),
@@ -590,7 +591,7 @@ add_multiline(slide, Inches(0.9), Inches(2.2), Inches(5.2), Inches(3.5), [
 
 add_card(slide, Inches(6.8), Inches(1.5), Inches(5.8), Inches(5.0))
 add_textbox(slide, Inches(7.0), Inches(1.6), Inches(5.4), Inches(0.4),
-            "v3 (5 nucleases + ABE8e)", font_size=18, color=GREEN_ACC, bold=True)
+            "Multi-Nuclease (5 nucleases + ABE8e)", font_size=18, color=GREEN_ACC, bold=True)
 add_multiline(slide, Inches(7.0), Inches(2.2), Inches(5.4), Inches(3.5), [
     ("PAM: NGG + NRG + NG + NNN + TTTV", WHITE, False),
     ("Window: positions 3-9 (7 nt, ABE8e)", WHITE, False),
@@ -607,15 +608,15 @@ add_slide_number(slide, 11)
 # ---- SLIDE 12: KEY FINDING - BE Rescue -------------------------------------
 slide = prs.slides.add_slide(blank_layout)
 set_slide_bg(slide, RGBColor(0x15, 0x1E, 0x2B))
-add_coral_banner(slide, "v3 KEY FINDING")
+add_coral_banner(slide, "KEY FINDING")
 
-add_title_bar(slide, "Base Editing Rescued: 0/30 to 6/30")
+add_title_bar(slide, "Multi-Nuclease Engine Rescues Base Editing")
 
 add_card(slide, Inches(0.7), Inches(1.7), Inches(11.8), Inches(1.5),
          RGBColor(0x0A, 0x2A, 0x15))
 add_textbox(slide, Inches(1.0), Inches(1.9), Inches(11.2), Inches(1.0),
-            "v3 strategy distribution: BE 20% | PE 77% | HDR 3%\n"
-            "(v2 was: BE 0% | PE 97% | HDR 3%)",
+            "With multi-nuclease: BE 20% | PE 77% | HDR 3%\n"
+            "(SpCas9 only: BE 0% | PE 97% | HDR 3%)",
             font_size=20, color=GREEN_ACC, bold=True, alignment=PP_ALIGN.CENTER)
 
 # Strategy distribution figure (real data)
@@ -624,14 +625,14 @@ add_figure(slide, 'Fig_StrategyDistribution_v2_v3.png',
 
 # Key stats on the right
 add_stat_box(slide, Inches(7.8), Inches(3.5), Inches(2.3), Inches(1.0),
-             "6/30", "BE v3", GREEN_ACC)
+             "6/30", "BE (multi-nuc.)", GREEN_ACC)
 add_stat_box(slide, Inches(10.3), Inches(3.5), Inches(2.3), Inches(1.0),
-             "0/30", "BE v2", RED_ACCENT)
+             "0/30", "BE (SpCas9)", RED_ACCENT)
 add_textbox(slide, Inches(7.8), Inches(5.0), Inches(4.8), Inches(1.5),
             "Primary drivers:\n"
             "  ABE8e broader window (3-9)\n"
-            "  enFnCas9 NRG PAM\n"
-            "Bug fixed: bystander triple-count",
+            "  enFnCas9 NRG PAM (~2x target sites)\n"
+            "  Bystander scoring corrected",
             font_size=13, color=LIGHT_GRAY)
 
 add_slide_number(slide, 12)
@@ -673,17 +674,17 @@ add_textbox(slide, Inches(0.5), Inches(6.7), Inches(12.0), Inches(0.5),
 add_slide_number(slide, 13)
 
 
-# ---- SLIDE 14: Bystander Bug Fix ------------------------------------------
+# ---- SLIDE 14: Bystander Scoring Architecture ------------------------------
 slide = prs.slides.add_slide(blank_layout)
 set_slide_bg(slide, RGBColor(0x15, 0x1E, 0x2B))
-add_coral_banner(slide, "CRITICAL BUG FIX")
+add_coral_banner(slide, "SCORING ARCHITECTURE")
 
-add_title_bar(slide, "Bystander Triple-Counting Eliminated",
-              "Root cause of the degenerate 'always PE' pattern in v2")
+add_title_bar(slide, "Why Bystander Scoring Matters",
+              "Redundant penalty channels can create degenerate 'always PE' patterns")
 
 add_card(slide, Inches(0.7), Inches(1.7), Inches(5.6), Inches(4.5))
 add_textbox(slide, Inches(0.9), Inches(1.8), Inches(5.2), Inches(0.4),
-            "v2 Bug: 3 Penalty Channels", font_size=18, color=RED_ACCENT, bold=True)
+            "Problem: Triple-Counted Penalty", font_size=18, color=RED_ACCENT, bold=True)
 add_multiline(slide, Inches(0.9), Inches(2.4), Inches(5.2), Inches(3.0), [
     ("1. Risk dimension: severity x 0.3 x w=0.15", WHITE, False),
     ("   Penalty for 1 bystander: 0.009", LIGHT_GRAY, False),
@@ -699,7 +700,7 @@ add_multiline(slide, Inches(0.9), Inches(2.4), Inches(5.2), Inches(3.0), [
 
 add_card(slide, Inches(6.8), Inches(1.7), Inches(5.8), Inches(4.5))
 add_textbox(slide, Inches(7.0), Inches(1.8), Inches(5.4), Inches(0.4),
-            "v3 Fix: Single Consequence Dimension", font_size=18, color=GREEN_ACC, bold=True)
+            "Solution: Single Consequence Dimension", font_size=18, color=GREEN_ACC, bold=True)
 add_multiline(slide, Inches(7.0), Inches(2.4), Inches(5.4), Inches(3.0), [
     ("Bystander removed from Risk dimension", WHITE, False),
     ("Consequence is now a proper 6th TOPSIS dim", WHITE, False),
@@ -996,41 +997,44 @@ add_figure(slide, 'Fig_ParameterProvenance.png',
 add_slide_number(slide, 21)
 
 
-# ---- SLIDE 22: v3 Benchmark Results ----------------------------------------
+# ---- SLIDE 22: Benchmark Results -------------------------------------------
 slide = prs.slides.add_slide(blank_layout)
 set_slide_bg(slide)
-add_title_bar(slide, "Benchmark Results: v2 vs v3",
-              "30 ClinVar cases, verified GRCh38 coordinates")
+add_title_bar(slide, "Benchmark Results",
+              "30 ClinVar cases | verified GRCh38 coordinates | all references PMID-confirmed")
 
-# Comparison table
+# ClinVar Benchmark
 add_card(slide, Inches(0.7), Inches(1.5), Inches(5.6), Inches(5.0))
 add_textbox(slide, Inches(0.9), Inches(1.6), Inches(5.2), Inches(0.4),
-            "v2 Results (SpCas9 + ABE7.10)", font_size=16, color=TEAL, bold=True)
+            "ClinVar Benchmark (30 cases)", font_size=16, color=TEAL, bold=True)
 add_multiline(slide, Inches(0.9), Inches(2.2), Inches(5.2), Inches(3.5), [
-    ("Top-1 accuracy: 86.7% (26/30)", WHITE, True),
-    ("Top-3 accuracy: 96.7% (29/30)", WHITE, False),
-    ("Rejection accuracy: 90.0% (27/30)", WHITE, False),
-    ("", WHITE, False),
-    ("Strategy: PE=29, HDR=1, BE=0", WHITE, False),
-    ("", WHITE, False),
-    ("Scoring: 5D weighted sum", DARK_GRAY, False),
-    ("Tests: 123 passing", DARK_GRAY, False),
-], font_size=14, line_spacing=1.3)
-
-add_card(slide, Inches(6.8), Inches(1.5), Inches(5.8), Inches(5.0))
-add_textbox(slide, Inches(7.0), Inches(1.6), Inches(5.4), Inches(0.4),
-            "v3 Results (multi-nuclease + TOPSIS 6D)", font_size=16, color=CORAL, bold=True)
-add_multiline(slide, Inches(7.0), Inches(2.2), Inches(5.4), Inches(3.5), [
     ("Top-1 accuracy: 86.7% (26/30)", WHITE, True),
     ("Top-3 accuracy: 96.7% (29/30)", WHITE, False),
     ("Rejection accuracy: 86.7% (26/30)", WHITE, False),
     ("", WHITE, False),
-    ("Strategy: PE=23, BE=6, HDR=1", GREEN_ACC, True),
+    ("Strategy distribution:", DARK_GRAY, False),
+    ("  PE: 23/30 (77%)", CORAL, True),
+    ("  BE:  6/30 (20%)", GREEN_ACC, True),
+    ("  HDR: 1/30  (3%)", GOLD, False),
     ("", WHITE, False),
-    ("Scoring: 6D TOPSIS + Pareto + VIKOR/WPM", CORAL, False),
-    ("Tests: 198 passing", CORAL, False),
-    ("SEs/CIs on all outputs", CORAL, False),
-    ("All 20 references web-verified", CORAL, False),
+    ("Scoring: 6D TOPSIS + Pareto + VIKOR/WPM", TEAL, False),
+], font_size=14, line_spacing=1.3)
+
+# Literature + Technical Summary
+add_card(slide, Inches(6.8), Inches(1.5), Inches(5.8), Inches(5.0))
+add_textbox(slide, Inches(7.0), Inches(1.6), Inches(5.4), Inches(0.4),
+            "Literature Benchmark + Technical", font_size=16, color=CORAL, bold=True)
+add_multiline(slide, Inches(7.0), Inches(2.2), Inches(5.4), Inches(3.5), [
+    ("33 published cases (20 genes)", WHITE, True),
+    ("Top-1 concordance: 30%", WHITE, False),
+    ("Top-3 concordance: 80%", WHITE, False),
+    ("(Discordance: pre-PE HDR papers)", DARK_GRAY, False),
+    ("", WHITE, False),
+    ("Cross-method: 100% concordance", GREEN_ACC, True),
+    ("  (TOPSIS = VIKOR = WPM)", TEAL, False),
+    ("224 tests passing, 0 failures", TEAL, False),
+    ("All 20 manuscript refs verified", TEAL, False),
+    ("Every parameter evidence-tagged", TEAL, False),
 ], font_size=14, line_spacing=1.3)
 
 # Literature benchmark figure (bottom center)
@@ -1043,13 +1047,13 @@ add_slide_number(slide, 22)
 # ---- SLIDE 23: Codebase Summary -------------------------------------------
 slide = prs.slides.add_slide(blank_layout)
 set_slide_bg(slide)
-add_title_bar(slide, "v3 Codebase Summary",
-              "Version 3.0.0 | MIT License | github.com/visvikbharti/CRISPRArchitect")
+add_title_bar(slide, "Codebase Summary",
+              "MIT License | github.com/visvikbharti/CRISPRArchitect")
 
 stats_data = [
-    ("198", "Tests Passing", TEAL),
-    ("3.0.0", "Version", CORAL),
-    ("~36,500", "Lines of Code", GOLD),
+    ("224", "Tests Passing", TEAL),
+    ("~36,500", "Lines of Python", CORAL),
+    ("5 × 9", "Nucleases × Editors", GOLD),
     ("20", "Verified Refs", GREEN_ACC),
     ("6", "TOPSIS Dims", BLUE_ACC),
     ("0", "Test Failures", GREEN_ACC),
@@ -1226,11 +1230,11 @@ add_textbox(slide, Inches(1.0), Inches(4.0), Inches(11.3), Inches(0.5),
             "Vishal Bharti  |  Debojyoti Chakraborty Lab  |  CSIR-IGIB",
             font_size=18, color=SOFT_WHITE)
 add_textbox(slide, Inches(1.0), Inches(4.6), Inches(11.3), Inches(0.5),
-            "github.com/visvikbharti/CRISPRArchitect  |  MIT License  |  v3.0.0",
+            "github.com/visvikbharti/CRISPRArchitect  |  MIT License",
             font_size=14, color=DARK_GRAY)
 
 add_textbox(slide, Inches(1.0), Inches(5.5), Inches(11.3), Inches(1.0),
-            "Key takeaway: CRISPRArchitect v3 provides transparent,\n"
+            "Key takeaway: CRISPRArchitect provides transparent,\n"
             "method-robust, uncertainty-quantified strategy recommendations\n"
             "with every parameter traceable to published evidence.",
             font_size=16, color=LIGHT_GRAY, alignment=PP_ALIGN.CENTER)

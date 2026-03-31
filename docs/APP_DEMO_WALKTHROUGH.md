@@ -28,7 +28,7 @@
 **What you see:** Title "CRISPRArchitect" with module cards.
 
 **What to say:**
-> "This is the web interface for CRISPRArchitect v3. It has four main analysis pages in the sidebar: Gene & Mutation Setup, MOSAIC strategy optimization, ConversionSim Monte Carlo simulation, and the new v3 Strategy Analysis with multi-nuclease TOPSIS scoring and delivery-aware recommendations. Let me walk through a real example."
+> "This is the web interface for CRISPRArchitect. It has four main analysis pages in the sidebar: Gene & Mutation Setup, MOSAIC strategy optimization, ConversionSim Monte Carlo simulation, and the Strategy Analysis page with multi-nuclease TOPSIS scoring and delivery-aware recommendations. Let me walk through a real example."
 
 **What to click:** Move to the next page via the sidebar.
 
@@ -109,18 +109,18 @@
 4. Conversion probability at key distances
 
 **What to say:**
-> "10,000 virtual cells undergoing HDR via SDSA. Each gets random resection, RAD51 filament coverage, and a geometric synthesis tract. In v3, every number has a standard error and 95% CI. Note: this models SDSA only — not ssODN repair, which uses a different pathway."
+> "10,000 virtual cells undergoing HDR via SDSA. Each gets random resection, RAD51 filament coverage, and a geometric synthesis tract. Every number has a standard error and 95% CI. Note: this models SDSA only — not ssODN repair, which uses a different pathway."
 
 **If asked about p=0.002 sensitivity:**
 > "We swept p from 0.001 to 0.005 — a 10-fold range — and HDR recommendations are robust across all values. The figure is in the presentation slide 25."
 
 ---
 
-## Page 5: v3 Strategy Analysis (THE KEY DEMO — 3-4 minutes)
+## Page 5: Strategy Analysis (THE KEY DEMO — 3-4 minutes)
 
-**What to click:** Sidebar → **"v3: Strategy Analysis"**
+**What to click:** Sidebar → **"Strategy Analysis"**
 
-This is the v3 multi-nuclease, TOPSIS-scored pipeline with delivery-aware recommendations.
+This is the multi-nuclease, TOPSIS-scored pipeline with delivery-aware recommendations.
 
 ### Step 5a: Enter a variant
 In the sidebar:
@@ -172,7 +172,7 @@ In the sidebar:
    - HDR: donor type, cut-to-edit distance
 
    **What to say:**
-   > "The feasibility section shows results for every nuclease-editor combination tested — not just SpCas9 but also enFnCas9, SpCas9-NG, and SpRY. This is how v3 rescued base editing from 0% to 20% of top-ranked strategies."
+   > "The feasibility section shows results for every nuclease-editor combination tested — not just SpCas9 but also enFnCas9, SpCas9-NG, and SpRY. This is how the multi-nuclease engine rescued base editing from 0% to 20% of top-ranked strategies."
 
 6. **Rejected strategies** (collapsible) — with rejection reasons
 
@@ -194,8 +194,8 @@ If someone asks about sickle cell disease:
 ## Demo Flow Recommendations
 
 ### Short demo (5 min): Home → Setup (NF1) → MOSAIC → show ranking
-### Standard demo (8 min): Add v3 Strategy Analysis (COL7A1)
-### Full demo (12 min): Add ConversionSim + HBB in CD34_HSC
+### Standard demo (8 min): Add Strategy Analysis (COL7A1)
+### Full demo (12 min): Add ConversionSim + HBB sickle cell in CD34_HSC
 
 ### When to show which page
 

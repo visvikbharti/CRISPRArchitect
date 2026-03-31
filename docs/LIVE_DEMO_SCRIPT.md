@@ -52,7 +52,32 @@ python cli.py simulate --cell iPSC --nuclease enFnCas9 --donor cssDNA -n 10000
 **What to say:**
 > "This runs 10,000 Monte Carlo simulations of HDR with enFnCas9 and a cssDNA donor in iPSCs. Notice the confidence intervals — every number has uncertainty quantification. The HDR rate is about 3.5% with a 95% CI of 3.2 to 3.9%."
 
-## Demo 4: Webapp — Full v3 Pipeline with Delivery Advisor (3 minutes)
+## Demo 4: HBB Sickle Cell Disease — Our Lab's Target (45 seconds)
+
+This is directly relevant to the lab's SCD work and GMP/clinical trial.
+
+```bash
+python cli.py analyze --gene HBB --hgvs "NM_000518.5:c.20A>T" --cell CD34_HSC
+```
+
+**What to say while it runs:**
+> "This is the classic sickle cell variant — HBB c.20A>T, the E6V transversion. Our lab is actively working on this. Let's see what CRISPRArchitect recommends."
+
+**Expected output highlights:**
+- Variant: HBB:c.20A>T (p.Glu7Val)
+- Consequence: missense
+- Base editing: **REJECTED** — A>T is a transversion, neither ABE nor CBE can correct it
+- Top strategy: **Prime Editing** (PE can correct T back to A)
+- HDR: feasible but penalized for DSB in HSCs
+
+**What to say:**
+> "The tool correctly rejects base editing — this is a transversion, not a transition. PE is recommended. Notice the delivery advisor now gives HSC-specific guidance: pre-stimulate with SCF/TPO/FLT3L, use nucleofection with mRNA, minimize culture to preserve stemness. This directly applies to our upcoming clinical work."
+
+**Why this demo is powerful:** It connects CRISPRArchitect to the lab's own research program.
+
+---
+
+## Demo 5: Webapp (3 minutes, if time allows)
 
 If the audience wants to see the visual interface:
 
@@ -63,7 +88,7 @@ streamlit run webapp/app.py
 Opens http://localhost:8501
 
 ### Quick webapp walkthrough
-1. Sidebar → **v3: Strategy Analysis**
+1. Sidebar → **Strategy Analysis**
 2. Enter: Gene **COL7A1**, Chromosome **3**, Position **48580586**, Ref **C**, Alt **T**
 3. Cell type: **iPSC**, Nuclease: **SpCas9**
 4. Click **"Analyze Variant"** → wait ~10 seconds
@@ -71,13 +96,13 @@ Opens http://localhost:8501
 **What to show:**
 - **Variant annotation card** — consequence, HGVS, ref validation
 - **TOPSIS ranking** — 6D scores, rank stability bars, Pareto badges
-- **Delivery recommendations** (new!) — donor format, delivery method, viability tips
+- **Delivery recommendations** — donor format, delivery method, viability tips
 - **Feasibility breakdown** — all nuclease-editor combinations tested
 
 **What to say about delivery:**
-> "New in v3.1 — every ranked strategy gets delivery annotations. For this iPSC case, it recommends ssODN for the base editing strategy, warns about p53 toxicity if dsDNA were used, and suggests ROCK inhibitor and p53DD co-delivery for viability. These come from a survey of 87 verified references."
+> "Every ranked strategy gets delivery annotations. For this iPSC case, it recommends ssODN for the base editing strategy, warns about p53 toxicity if dsDNA were used, and suggests ROCK inhibitor and p53DD co-delivery for viability. These come from a survey of 87 verified references."
 
-### For sickle cell / HSC demo
+### For sickle cell in webapp
 - Gene: **HBB**, Chromosome: **11**, Position: **5227002**, Ref: **T**, Alt: **A**
 - Cell type: **CD34_HSC**
 - Shows HSC-specific delivery guidance (pre-stimulation, HiFi Cas9, minimize culture)

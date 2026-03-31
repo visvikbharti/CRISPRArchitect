@@ -60,20 +60,20 @@ def save_fig(fig, name):
 # FIGURE 1: Strategy Distribution — v2 vs v3
 # =====================================================================
 def fig_strategy_distribution():
-    """Bar chart comparing v2 and v3 strategy distributions."""
+    """Bar chart comparing SpCas9-only vs multi-nuclease strategy distributions."""
     fig, axes = plt.subplots(1, 2, figsize=(10, 5))
 
-    # v2 data (from definitive_benchmark_results.json — verified)
-    v2_data = {'PE': 29, 'HDR': 1, 'BE': 0}
-    # v3 data (from v3_benchmark_results.json — verified)
-    v3_data = {'PE': 23, 'BE': 6, 'HDR': 1}
+    # SpCas9-only data (from definitive_benchmark_results.json — verified)
+    spcas9_data = {'PE': 29, 'HDR': 1, 'BE': 0}
+    # Multi-nuclease data (from v3_benchmark_results.json — verified)
+    multi_data = {'PE': 23, 'BE': 6, 'HDR': 1}
 
     categories = ['BE', 'PE', 'HDR']
     colors = [TEAL, CORAL, GOLD]
 
-    for ax, (title, data, version) in zip(axes, [
-        ('v2 (SpCas9 + ABE7.10)', v2_data, 'v2'),
-        ('v3 (Multi-nuclease + TOPSIS 6D)', v3_data, 'v3'),
+    for ax, (title, data) in zip(axes, [
+        ('SpCas9 + ABE7.10 only', spcas9_data),
+        ('Multi-nuclease + TOPSIS 6D', multi_data),
     ]):
         vals = [data.get(c, 0) for c in categories]
         bars = ax.bar(categories, vals, color=colors, edgecolor='white',
@@ -92,7 +92,7 @@ def fig_strategy_distribution():
         ax.spines['top'].set_visible(False)
         ax.spines['right'].set_visible(False)
 
-    fig.suptitle('Strategy Distribution: v2 vs v3 (30 ClinVar Cases)',
+    fig.suptitle('Impact of Multi-Nuclease Engine (30 ClinVar Cases)',
                  fontsize=14, fontweight='bold', y=1.02)
     fig.tight_layout()
     save_fig(fig, 'Fig_StrategyDistribution_v2_v3')
@@ -177,15 +177,14 @@ def fig_literature_benchmark():
 # FIGURE 3: Bystander Fix Impact
 # =====================================================================
 def fig_bystander_fix():
-    """Show the scoring before and after bystander triple-counting fix."""
+    """Show how proper bystander scoring affects BE vs PE ranking."""
     fig, ax = plt.subplots(figsize=(10, 6))
 
     bystanders = [0, 1, 2, 3, 4]
 
-    # v2 scores (with triple-counting bug)
-    # Calculated from the old formula: penalty = 0.045*sev + 0.08*sev + 0.03(if sev>0)
+    # Initial scoring (with triple-counting — bystander penalized in 3 channels)
     be_feasibility_advantage = 0.0325
-    v2_be_scores = []
+    initial_be_scores = []
     pe_score = 0.6302
     for n in bystanders:
         sev = n * 0.2
@@ -196,40 +195,39 @@ def fig_bystander_fix():
             conseq_pen = sev * 0.08
             bonus_lost = 0.03
             diff = be_feasibility_advantage - risk_pen - conseq_pen - bonus_lost
-        v2_be_scores.append(pe_score + diff)
+        initial_be_scores.append(pe_score + diff)
 
-    # v3 TOPSIS scores (from actual test: BE wins with 0-3 bystanders)
-    # These are from the TOPSIS 6D scoring (consequence as proper dimension)
-    v3_be_topsis = [1.000, 0.995, 0.990, 0.986, 0.869]  # approximate from our test
-    v3_pe_topsis = [0.869, 0.869, 0.869, 0.869, 0.869]  # PE score doesn't change
+    # Corrected TOPSIS 6D scores (consequence as proper single dimension)
+    corrected_be_topsis = [1.000, 0.995, 0.990, 0.986, 0.869]
+    corrected_pe_topsis = [0.869, 0.869, 0.869, 0.869, 0.869]
 
-    ax.plot(bystanders, v2_be_scores, 'o-', color=RED, linewidth=2, markersize=8,
-            label='v2 BE score (triple-counted)', zorder=5)
+    ax.plot(bystanders, initial_be_scores, 'o-', color=RED, linewidth=2, markersize=8,
+            label='BE score (triple-counted bystander penalty)', zorder=5)
     ax.axhline(y=pe_score, color=CORAL, linestyle='--', linewidth=2,
-               label=f'v2 PE score ({pe_score:.3f})', alpha=0.7)
+               label=f'PE score ({pe_score:.3f})', alpha=0.7)
 
-    ax.plot(bystanders, v3_be_topsis, 's-', color=TEAL, linewidth=2, markersize=8,
-            label='v3 BE TOPSIS score (fixed)', zorder=5)
-    ax.plot(bystanders, v3_pe_topsis, '^--', color=GOLD, linewidth=2, markersize=6,
-            label='v3 PE TOPSIS score', alpha=0.7)
+    ax.plot(bystanders, corrected_be_topsis, 's-', color=TEAL, linewidth=2, markersize=8,
+            label='BE TOPSIS score (single consequence dimension)', zorder=5)
+    ax.plot(bystanders, corrected_pe_topsis, '^--', color=GOLD, linewidth=2, markersize=6,
+            label='PE TOPSIS score', alpha=0.7)
 
     # Highlight the crossover region
-    ax.axvspan(-0.2, 0.5, color=GREEN, alpha=0.1, label='BE wins in both versions')
+    ax.axvspan(-0.2, 0.5, color=GREEN, alpha=0.1, label='BE wins (both methods)')
     ax.axvspan(0.5, 4.2, color=RED, alpha=0.05)
 
     # Annotations
-    ax.annotate('v2: PE wins with\njust 1 bystander',
-                xy=(1, v2_be_scores[1]), xytext=(2, 0.58),
+    ax.annotate('Triple-count: PE wins\nwith just 1 bystander',
+                xy=(1, initial_be_scores[1]), xytext=(2, 0.58),
                 arrowprops=dict(arrowstyle='->', color=RED),
                 fontsize=10, color=RED, fontweight='bold')
-    ax.annotate('v3: BE still wins\nwith 3 bystanders',
-                xy=(3, v3_be_topsis[3]), xytext=(3.5, 1.02),
+    ax.annotate('Corrected: BE still wins\nwith 3 bystanders',
+                xy=(3, corrected_be_topsis[3]), xytext=(3.5, 1.02),
                 arrowprops=dict(arrowstyle='->', color=TEAL),
                 fontsize=10, color=TEAL, fontweight='bold')
 
     ax.set_xlabel('Number of bystander edits in editing window', fontsize=12)
     ax.set_ylabel('Strategy score', fontsize=12)
-    ax.set_title('Bystander Triple-Counting Bug: v2 vs v3 Scoring',
+    ax.set_title('Why Bystander Scoring Architecture Matters',
                  fontsize=14, fontweight='bold')
     ax.set_xticks(bystanders)
     ax.set_xlim(-0.3, 4.3)

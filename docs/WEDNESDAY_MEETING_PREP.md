@@ -38,11 +38,11 @@ Print `docs/LAB_MEETING_SPEAKER_GUIDE_v3.md` or keep it open on your phone/secon
 
 | Number | What It Means | When to Use It |
 |---|---|---|
-| **0 → 6 (out of 30)** | BE cases rescued by multi-nuclease engine | Slide 12, the headline result |
+| **6 out of 30** | BE cases rescued by multi-nuclease engine | Slide 12, the headline result |
 | **86.7%** | Top-1 accuracy on ClinVar benchmark | Slide 22 |
 | **80%** | Top-3 concordance on literature benchmark | When discussing real-world validation |
 | **100%** | Cross-method concordance (TOPSIS = VIKOR = WPM) | When defending scoring methodology |
-| **190** | Tests passing, 0 failures | When discussing code quality |
+| **224** | Tests passing, 0 failures | When discussing code quality |
 
 ---
 
@@ -71,7 +71,7 @@ Prof. Chakraborty said "discuss objectives first." This means he wants to unders
 ## Making the Project Appealing and Useful
 
 ### The Pitch (30-second version for the PI):
-> "CRISPRArchitect is the first tool that compares base editing, prime editing, and HDR side-by-side for any variant, using our own enFnCas9 as a first-class nuclease. For every iPSC editing experiment this lab starts, running CRISPRArchitect first takes 30 seconds and might reveal a simpler or safer strategy. The tool found that PAM-window constraints — not mutation type — are the real bottleneck for base editing, and that our enFnCas9 helps overcome this bottleneck."
+> "CRISPRArchitect is a tool that compares base editing, prime editing, and HDR side-by-side for any variant, using our own enFnCas9 as a first-class nuclease. For every iPSC editing experiment this lab starts, running CRISPRArchitect first takes 30 seconds and might reveal a simpler or safer strategy. The tool found that PAM-window constraints — not mutation type — are the real bottleneck for base editing, and that enFnCas9 helps overcome this bottleneck."
 
 ### Why the Lab Should Care:
 1. **Saves experimental time**: Before committing to a 3-month HDR experiment, check if BE or PE would work at that locus.

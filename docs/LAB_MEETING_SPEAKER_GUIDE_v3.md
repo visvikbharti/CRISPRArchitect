@@ -1,9 +1,10 @@
-# CRISPRArchitect v3 — Lab Meeting Speaker Guide
+# CRISPRArchitect — Lab Meeting Speaker Guide
 
 **Presenter:** Vishal Bharti
-**Audience:** Debojyoti Chakraborty Lab, CSIR-IGIB
+**Audience:** Debojyoti Chakraborty Lab, CSIR-IGIB (first time seeing this project)
 **Duration:** ~40-50 minutes + 15-20 minutes Q&A
-**Presentation file:** `paper/CRISPRArchitect_v3_LabMeeting.pptx` (28 slides, includes SDSA sensitivity + delivery advisor slides)
+**Presentation file:** `paper/CRISPRArchitect_v3_LabMeeting.pptx` (28 slides)
+**IMPORTANT:** Nobody in the audience has heard of this project before. Present it as one unified tool, NOT as a version history.
 
 ---
 
@@ -23,7 +24,9 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 ### Slide 1: Title
 
 **What to say:**
-> "Good morning/afternoon everyone. Today I'll be presenting CRISPRArchitect version 3 — a computational tool I've been developing for designing genome editing strategies. The core idea is simple: when you have a pathogenic variant to correct, should you use base editing, prime editing, or HDR? CRISPRArchitect evaluates all three and gives you a ranked recommendation."
+> "Good morning everyone. Today I'll be presenting CRISPRArchitect — a computational decision-support tool I've been developing. The core idea is simple: when you have a pathogenic variant to correct in a patient iPSC line, should you use base editing, prime editing, or HDR? CRISPRArchitect evaluates all three simultaneously and gives you a ranked recommendation with transparent reasoning."
+
+**What NOT to say:** Don't mention "version 3" or any version history. The audience doesn't know v1 or v2 existed.
 
 **Transition:** "Let me start with why this tool is needed."
 
@@ -59,34 +62,34 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 5: v1 Foundation
+### Slide 5: Biophysical Simulation Modules
 
 **What to say:**
-> "The project started with v1 — six simulation modules totaling about 24,000 lines of code. The most important is ConversionSim, which simulates HDR gene conversion tracts using Monte Carlo methods. MOSAIC handles multi-locus strategy optimization. ChromBridge predicts 3D chromatin distances. TopoPred analyzes cssDNA secondary structure. LoopSim simulates cohesin loop extrusion. And there's a Streamlit web app."
+> "CRISPRArchitect is built on a foundation of biophysical simulation modules — about 24,000 lines of code. The most important is ConversionSim, which simulates HDR gene conversion tracts using Monte Carlo methods. MOSAIC handles multi-locus strategy optimization. There's also a cssDNA topology predictor and a Streamlit web app for interactive use."
 >
-> "These are all biophysically grounded simulations — not heuristic rules."
+> "These are biophysically grounded simulations — not heuristic rules. Every parameter is traceable to published data."
 
 **Tip:** Keep this brief (~1 minute). The audience wants to hear about results, not module lists.
 
 ---
 
-### Slide 6: v2 Recap
+### Slide 6: Initial Analysis (SpCas9-Only)
 
 **What to say:**
-> "Version 2 added the transcript-aware pipeline — connecting to Ensembl, mapping variants to coding coordinates, checking reference alleles, annotating consequences. We benchmarked it on 30 ClinVar cases."
->
-> "The results were good — 86.7% top-1 accuracy — but there was a problem. Look at the strategy distribution: PE won in 29 out of 30 cases. Base editing was never top-ranked. Even at seven loci where the mutation was a perfect ABE-compatible transition."
+> "When we first benchmarked CRISPRArchitect using only SpCas9 as the nuclease, we tested it on 30 ClinVar cases. The accuracy was good — 86.7% top-1 — but there was a striking problem. Look at the strategy distribution: PE won in 29 out of 30 cases. Base editing was never top-ranked. Even at seven loci where the mutation was a perfect ABE-compatible transition."
 
 **Emphasis:** Point to "BE: 0/30" and "Problem: PE always wins."
 
-**Transition:** "This is what led us to ask: what's going wrong?"
+**What NOT to say:** Don't say "version 2" or refer to previous versions. Say "our initial analysis" or "with SpCas9 only."
+
+**Transition:** "This led us to investigate: what's going wrong with base editing?"
 
 ---
 
-### Slide 7: v2 Key Finding — PAM-Window Bottleneck
+### Slide 7: KEY FINDING — PAM-Window Bottleneck
 
 **What to say (this is a KEY moment):**
-> "This was the most important finding from v2. At all seven ClinVar loci with ABE-compatible transitions — meaning A-to-G or T-to-C mutations that should be perfect for adenine base editing — not a single SpCas9 guide placed the target base within the ABE editing window at positions 4-7."
+> "This was our most important finding. At all seven ClinVar loci with ABE-compatible transitions — meaning A-to-G or T-to-C mutations that should be perfect for adenine base editing — not a single SpCas9 guide placed the target base within the ABE editing window at positions 4-7."
 >
 > "This means that mutation-type classification alone — the way most people think about base editing ('oh, it's an A>G, use ABE') — is insufficient. You have to check the PAM-editing window geometry for every single locus."
 
@@ -94,12 +97,12 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 8: v3 What's New
+### Slide 8: Core Innovations
 
 **What to say:**
-> "This finding motivated version 3, which has three major new capabilities."
+> "This finding motivated three key technical innovations in CRISPRArchitect."
 >
-> "First, a multi-nuclease engine. Instead of just SpCas9, we now evaluate five nucleases including our own enFnCas9, paired with nine base editor profiles — three core editors plus six nuclease-specific fusions. This expands the PAM space enormously."
+> "First, a multi-nuclease engine. Instead of just SpCas9, we evaluate five nucleases including our own enFnCas9, paired with nine base editor profiles — three core editors plus six nuclease-specific fusions. This expands the PAM space enormously."
 >
 > "Second, we replaced the simple weighted-sum scoring with TOPSIS — a formal multi-criteria decision method — plus Pareto analysis and Monte Carlo sensitivity analysis. This is mathematically principled and provides uncertainty quantification."
 >
@@ -130,20 +133,20 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 ### Slide 11: How Multi-Nuclease Rescues Base Editing
 
 **What to say:**
-> "Here's the mechanism. On the left, v2 with SpCas9 only — NGG PAM covers about 8% of positions, and the ABE7.10 window is only 4 nucleotides wide. On the right, v3 adds enFnCas9 with NRG PAM and ABE8e with a window of positions 3-9 — nearly three times broader."
+> "Here's the mechanism. On the left, with SpCas9 only — NGG PAM covers about 8% of positions, and the ABE7.10 window is only 4 nucleotides wide. On the right, with the multi-nuclease engine, enFnCas9 adds NRG PAM and ABE8e has a window of positions 3-9 — nearly three times broader."
 >
 > "The combination of broader PAM and wider window rescued base editing at 6 out of 30 loci."
 
 ---
 
-### Slide 12: KEY FINDING — BE Rescue (0/30 → 6/30)
+### Slide 12: KEY FINDING — Multi-Nuclease Rescues Base Editing
 
 **What to say (second KEY moment):**
-> "This is the headline result of v3. Base editing went from zero top-ranked cases in v2 to six in v3. The strategy distribution is now 20% base editing, 77% prime editing, 3% HDR."
+> "This is the headline result. With the multi-nuclease engine, base editing went from zero top-ranked cases with SpCas9 alone to six out of thirty. The strategy distribution is now 20% base editing, 77% prime editing, 3% HDR."
 >
-> "But I need to mention something important we discovered. Part of the reason PE dominated in v2 was a scoring bug — bystander severity was being penalized three separate times through three different channels. We found and fixed this. I'll explain on the next slide."
+> "But I need to mention something important we discovered during development. Part of the reason PE dominated initially was a scoring architecture issue — bystander severity was being penalized through three separate channels. We caught and corrected this. I'll explain on the next slide."
 
-**Honesty note:** Do NOT hide the bug. The fact that you found it and fixed it demonstrates rigor.
+**Honesty note:** Be transparent about catching the scoring issue. Frame it as "during development we discovered..." not as a "v2 bug." The fact that you found it demonstrates rigor.
 
 ---
 
@@ -160,16 +163,16 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 14: Bystander Triple-Counting Bug Fix
+### Slide 14: Why Bystander Scoring Architecture Matters
 
 **What to say (be direct and honest):**
-> "During the v3 overhaul, we discovered a critical scoring bug. In v2, bystander edit severity was being penalized through three independent channels: once in the risk dimension, once as a consequence penalty, and once through the loss of a 'clean design' bonus. The total penalty for just one bystander was 0.055 — but base editing's feasibility advantage over prime editing was only 0.033."
+> "During development, we discovered a critical scoring issue. Bystander edit severity was being penalized through three independent channels: once in the risk dimension, once as a consequence penalty, and once through the loss of a 'clean design' bonus. The total penalty for just one bystander was 0.055 — but base editing's feasibility advantage over prime editing was only 0.033."
 >
 > "This meant PE won every time BE had even a single bystander edit in the window — which is almost always in real genomic contexts."
 >
-> "In v3, we fixed this by moving bystander scoring entirely to a dedicated consequence dimension — the 6th dimension in our TOPSIS analysis. Now BE beats PE even with 1-3 bystanders, which is biologically correct."
+> "We corrected this by moving bystander scoring entirely to a dedicated consequence dimension — the 6th dimension in our TOPSIS analysis. Now BE beats PE with 1-3 bystanders, which is biologically correct."
 
-**Why this matters:** "This shows why rigorous auditing matters. Without the fix, the tool would systematically undervalue base editing."
+**Why this matters:** "This shows why rigorous internal auditing matters. Without the correction, the tool would systematically undervalue base editing."
 
 ---
 
@@ -248,17 +251,21 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ---
 
-### Slide 22: Benchmark Results v2 vs v3
+### Slide 22: Benchmark Results
 
 **What to say:**
-> "Comparing v2 and v3 on the same 30 ClinVar cases: top-1 accuracy is the same at 86.7%. But the strategy distribution changed dramatically — from 97% PE in v2 to 77% PE plus 20% BE in v3. This is the direct result of the multi-nuclease engine and the bystander scoring fix."
+> "Here are our benchmark results. On the ClinVar benchmark of 30 verified cases, we achieve 86.7% top-1 accuracy and 96.7% top-3. The strategy distribution is 77% PE, 20% BE, 3% HDR."
+>
+> "On the literature benchmark of 33 published cases, our top-3 concordance is 80%. The top-1 discordance is largely because our tool recommends PE or BE for cases where older papers used HDR — before prime editing existed."
+>
+> "All three scoring methods — TOPSIS, VIKOR, and WPM — produce identical rankings. 100% concordance."
 
 ---
 
 ### Slide 23: Codebase Summary
 
 **What to say (keep brief):**
-> "Quick technical summary: 224 tests passing, version 3.0.0, about 36,500 lines of Python. All 20 manuscript references verified with PMIDs. Docker-ready for deployment. MIT license, available on GitHub."
+> "Quick technical summary: 224 tests passing, about 36,500 lines of Python. Five nucleases crossed with nine editor profiles. All 20 manuscript references verified with PMIDs. Docker-ready. MIT license, available on GitHub."
 
 ---
 
@@ -315,7 +322,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 ### Biological Questions
 
-**Q1: "Why does prime editing still dominate in 23/30 cases even after the fix?"**
+**Q1: "Why does prime editing still dominate in 23/30 cases?"**
 > PE genuinely has three structural advantages: (1) no editing window constraint — the RT template directly encodes the edit, so any mutation near any PAM is feasible; (2) broad mutation-type compatibility — transitions, transversions, and small indels; (3) zero DSBs, giving it a safety score of 1.0. At many loci, no nuclease-editor combination places the target within the base editing window, even with ABE8e and enFnCas9. This is not a scoring artifact — it's a real biological constraint. PE's dominance reflects the genuine versatility of the prime editing mechanism.
 
 **Q2: "What about cell-cycle dependence? HDR requires S/G2 phase."**
@@ -402,7 +409,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 **Q17: "How is the code organized?"**
 
-> Three layers: (1) v1 simulation modules — ConversionSim and MOSAIC are retained for simulation capabilities; ChromBridge, TopoPred, and LoopSim have been removed from v3 as they are not required by the current pipeline. (2) v2/v3 core pipeline (~12,500 LOC) — transcript mapping, feasibility engines, strategy generation, TOPSIS scoring. (3) Infrastructure — Streamlit web app, CLI, Docker, CI/CD. The v3 core pipeline is the primary entry point.
+> Three layers: (1) Simulation modules — ConversionSim and MOSAIC provide biophysical HDR simulation and multi-locus optimization. (2) Core pipeline (~12,500 LOC) — transcript mapping, feasibility engines, strategy generation, TOPSIS scoring. This is the primary entry point. (3) Infrastructure — Streamlit web app, CLI, Docker, CI/CD.
 
 **Q18: "Can I run this on my laptop?"**
 
@@ -426,7 +433,7 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 
 **Q22: "If PE dominates in 23/30 cases, why not just always recommend PE?"**
 
-> Because the 7 cases where PE is NOT the best choice matter enormously — those are the cases where CRISPRArchitect provides genuine decision support. At 6 loci, base editing is superior (simpler delivery, higher efficiency, no bystander issues). At the one remaining locus, HDR is needed. A "always PE" heuristic would miss these cases. Furthermore, as the nuclease landscape expands, the fraction of BE-rescuable cases will grow.
+> Because the 7 cases where PE is NOT the best choice matter enormously — those are the cases where CRISPRArchitect provides genuine decision support. At 6 loci, base editing is actually superior — simpler delivery, higher efficiency, no DSB, no bystander issues at those sites. At the one remaining locus, only HDR works. An "always PE" heuristic would miss these cases. And the 20% BE rescue rate we see today will grow as more PAM-flexible nucleases become available — this is directly relevant to enFnCas9's value.
 
 **Q23: "You haven't done any experiments. Can this be published?"**
 
@@ -466,8 +473,8 @@ After the slide-by-slide guide, there is a comprehensive **Q&A section** organiz
 | Slides | Section | Time |
 |--------|---------|------|
 | 1-3 | Introduction & Problem | 5 min |
-| 4-7 | Pipeline overview, v1/v2 foundation & key finding | 5 min |
-| 8-12 | v3 new capabilities & BE rescue | 10 min |
+| 4-7 | Pipeline, simulation foundation & PAM bottleneck finding | 5 min |
+| 8-12 | Multi-nuclease engine & BE rescue | 10 min |
 | 13-17 | Scoring methodology (TOPSIS/Pareto/sensitivity) | 10 min |
 | 18-21 | Scientific rigor (stats, scope, citations, params) | 8 min |
 | 22-24 | Results, codebase, limitations | 5 min |
@@ -484,9 +491,9 @@ All figures are in `paper/figures/v3_results/` and are generated from **real dat
 
 | Figure File | Use on Slide | What It Shows | Key Interpretation |
 |---|---|---|---|
-| `Fig_StrategyDistribution_v2_v3.png` | Slide 12 (BE Rescue) | Side-by-side bars: v2 (BE=0, PE=29) vs v3 (BE=6, PE=23) | Multi-nuclease engine rescued BE from 0% to 20%. PE still dominates (77%) but this reflects genuine biological constraints, not a bug. |
+| `Fig_StrategyDistribution_v2_v3.png` | Slide 12 (BE Rescue) | Side-by-side bars: SpCas9-only (BE=0, PE=29) vs multi-nuclease (BE=6, PE=23) | Multi-nuclease engine rescued BE from 0% to 20%. PE still dominates (77%) — genuine biological constraint. |
 | `Fig_LiteratureBenchmark.png` | Slide 22 (Results) | Literature benchmark: 30% top-1, 80% top-3 concordance | Top-1 appears low (30%) but discordance is explainable: HDR papers are pre-PE era. Top-3 at 80% shows published strategy is nearly always in our recommendation set. |
-| `Fig_BystanterFix.png` | Slide 14 (Bug Fix) | v2 scoring vs v3: BE score drops below PE with just 1 bystander in v2, but stays above PE with 3 bystanders in v3 | The triple-counting bug made PE unbeatable. After fix, BE properly wins when PAM+window are verified. |
+| `Fig_BystanterFix.png` | Slide 14 (Scoring Architecture) | Triple-counted scoring vs corrected: BE drops below PE with 1 bystander when triple-counted, but stays above PE with 3 bystanders after correction | Proper scoring architecture lets BE win when PAM+window are verified. |
 | `Fig_ConversionSim_CIs.png` | Slide 18 (Statistical Rigor) | Tract length distribution with mean/median + 95% CI; distance-probability curve with Wilson CIs | Every output now has uncertainty quantification. Mean tract 706 bp (SE=37), P(>=500bp) = 47.2% [42.0-52.4%]. |
 | `Fig_ParameterProvenance.png` | Slide 21 (Parameters) | Pie chart: 35% measured, 20% derived, 45% assumed | Transparent about what we know vs assume. All [ASSUMED] parameters explored in sensitivity analysis. |
 | `Fig_CrossMethod_Agreement.png` | Slide 17 (Cross-Method) | TOPSIS vs VIKOR vs WPM: all produce identical rankings | 100% concordance proves recommendation is method-robust, not an artifact of TOPSIS. |
