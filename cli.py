@@ -109,17 +109,67 @@ def cmd_analyze(args):
 
     # Print strategy ranking
     print(f"Strategy Ranking (TOPSIS + sensitivity analysis):")
-    print(f"{'Rank':<6} {'Strategy':<35} {'Score':<8} {'Evidence':<10} {'Safety':<8}")
-    print("-" * 70)
+    print(f"{'Rank':<6} {'Strategy':<35} {'Score':<8} {'Stability':<12} {'Evidence':<10} {'Safety':<8}")
+    print("-" * 82)
     for s in result.strategies:
         evidence = s.strategy.evidence_tier.value if s.strategy.evidence_tier else "N/A"
+        stability = f"{s.rank_stability:.1%}" if s.rank_stability is not None else "N/A"
         print(f"  #{s.rank:<4} {s.strategy_name:<35} {s.overall_score:<8.3f} "
-              f"{evidence:<10} {s.safety_score:<8.2f}")
+              f"{stability:<12} {evidence:<10} {s.safety_score:<8.2f}")
 
     if result.strategies:
         top = result.strategies[0]
         print(f"\nRecommendation: {top.strategy_name}")
         print(f"  Evidence tier: {top.strategy.evidence_tier.value if top.strategy.evidence_tier else 'N/A'}")
+        if top.rank_stability is not None:
+            print(f"  Rank stability: {top.rank_stability:.1%} "
+                  f"(top-ranked in {top.rank_stability:.1%} of 10,000 weight permutations)")
+
+    # Print feasibility details (which specific editors were evaluated)
+    if result.bundles:
+        print(f"\nFeasibility Details:")
+        for b in result.bundles:
+            # Base editing details
+            best_be = b.best_base_editing_result()
+            if best_be and best_be.metadata:
+                m = best_be.metadata
+                editor = m.get('editor', '?')
+                nuclease = m.get('nuclease', '?')
+                window = m.get('window', '?')
+                tier = m.get('evidence_tier', '?')
+                print(f"  Best base editor: {editor} + {nuclease} "
+                      f"(window {window}, tier {tier})")
+                if best_be.best_guide:
+                    g = best_be.best_guide
+                    print(f"    Guide: {g.sequence_20mer} | PAM: {g.pam_sequence} "
+                          f"| GC: {g.gc_content:.0%}")
+                    print(f"    Target at window position {best_be.target_position_in_window}")
+                if best_be.bystander_count > 0:
+                    print(f"    Bystanders: {best_be.bystander_count} "
+                          f"at window positions {best_be.bystander_positions}")
+
+            # Count all tested editors
+            n_tested = len(b.base_editing_results)
+            n_feasible = sum(1 for r in b.base_editing_results
+                           if r.label.value == 'feasible')
+            n_marginal = sum(1 for r in b.base_editing_results
+                           if r.label.value == 'marginal')
+            n_rejected = sum(1 for r in b.base_editing_results
+                           if r.label.value == 'not_feasible')
+            if n_tested > 0:
+                print(f"  Editor-nuclease combos tested: {n_tested} "
+                      f"({n_feasible} feasible, {n_marginal} marginal, "
+                      f"{n_rejected} not feasible)")
+
+            # Prime editing
+            pe = b.prime_editing_result
+            if pe and pe.label.value != 'not_feasible':
+                print(f"  Prime editing: {pe.label.value} (score {pe.score:.3f})")
+
+            # HDR
+            hdr = b.hdr_result
+            if hdr and hdr.label.value != 'not_feasible':
+                print(f"  HDR: {hdr.label.value} (score {hdr.score:.3f})")
 
     # Print rejected strategies
     if result.rejected_strategies:

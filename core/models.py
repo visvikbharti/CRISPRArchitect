@@ -527,6 +527,7 @@ class ScoredStrategy:
     consequence_bonus: float = 0.0
     overall_score: float = 0.0
     rank: int = 0
+    rank_stability: Optional[float] = None  # from MC sensitivity analysis
     annotation_notes: List[str] = field(default_factory=list)
 
     @property

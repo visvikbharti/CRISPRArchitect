@@ -28,11 +28,12 @@ python cli.py analyze --gene COL7A1 --hgvs "NM_000094.4:c.5047C>T" --cell iPSC
 - Consequence: nonsense
 - HGVS c.: c.5047C>T, HGVS p.: p.Arg1683Ter
 - Ref validation: PASS
-- Top strategy: **Single-step Base Editing** (score ~0.983)
-- Evidence tier: A
+- Top strategy: **Single-step Base Editing** (score 0.983, stability 98.6%)
+- Best editor: **ABE8e + enFnCas9** (window 3-9, tier A)
+- 8 editor-nuclease combos tested (2 feasible, 4 marginal, 2 not feasible)
 
 **What to say:**
-> "The tool recommends base editing — specifically ABE, because the reverse complement of this C>T mutation is a G>A, which ABE can correct. It scores 0.983 out of 1.0 with evidence tier A. Prime editing is ranked second as a backup."
+> "The tool recommends base editing — specifically ABE8e with enFnCas9, which is our lab's nuclease. It scores 0.983 with 98.6% rank stability — meaning it stays #1 in 9,863 out of 10,000 random weight permutations. It tested 8 editor-nuclease combinations and ABE8e + enFnCas9 won. ABE7.10 and ABE8e with SpCas9 were rejected because no PAM places the target A in the editing window."
 
 ## Demo 2: Fetch a Gene (15 seconds)
 
@@ -72,12 +73,12 @@ python cli.py analyze --gene HBB --hgvs "NM_000518.5:c.20A>T" --cell HSC
 - Parsed: NM_000518.5:c.20A>T → chr11:5227002
 - Consequence: missense
 - HGVS c.: c.20A>T, HGVS p.: p.Glu7Val
-- Base editing: **NOT offered** — A>T is a transversion, neither ABE nor CBE can correct it
-- Top strategy: **Single-step Prime Editing** (score 1.000, evidence tier A)
+- Base editing: **NOT offered** — A>T is a transversion, 0 of 1 editor-nuclease combos feasible
+- Top strategy: **Single-step Prime Editing** (score 1.000, stability 100.0%)
 - HDR: ranked second, penalized for DSB requirement in HSCs
 
 **What to say:**
-> "The tool correctly excludes base editing — this is a transversion, not a transition. Prime editing is recommended with a perfect score. HDR is feasible but penalized because DSBs in HSCs carry higher toxicity risk. This directly applies to our upcoming clinical work."
+> "The tool correctly excludes base editing — this is a transversion, not a transition. It tested the editor-nuclease combinations and none could place the target in an editing window. Prime editing is recommended with a perfect score and 100% rank stability. HDR is feasible but penalized because DSBs in HSCs carry higher toxicity risk. This directly applies to our upcoming clinical work."
 
 **Why this demo is powerful:** It connects CRISPRArchitect to the lab's own research program.
 
@@ -94,12 +95,14 @@ python cli.py analyze --gene DMD --hgvs "NM_004006.3:c.10108C>T" --cell iPSC
 ```
 
 **What to say:**
-> "This is a DMD nonsense variant — C>T creating a premature stop codon. The tool recommends base editing with a score of 0.996. DMD is the largest human gene — 79 exons, 2.4 megabases — and CRISPRArchitect handles it correctly, resolving the CDS position to chrX."
+> "This is a DMD nonsense variant — C>T creating a premature stop codon. The tool recommends ABE8e with SpCas9, scoring 0.996 with 100% rank stability. DMD is the largest human gene — 79 exons, 2.4 megabases — and CRISPRArchitect handles it correctly. It tested 8 editor-nuclease combinations and 5 are feasible."
 
 **Expected output:**
 - Transcript: ENST00000357033 (DMD) — 79 exons, chrX, reverse strand
 - Consequence: nonsense, p.Arg3370Ter
-- Top strategy: **Single-step Base Editing** (score 0.996, tier A)
+- Top strategy: **Single-step Base Editing** (score 0.996, stability 100.0%)
+- Best editor: **ABE8e + SpCas9** (window 3-9, tier A), 1 bystander
+- 8 combos tested: 5 feasible, 2 marginal, 1 not feasible
 
 ### Beta-Thalassemia — Codon 39 Nonsense (30 seconds)
 
