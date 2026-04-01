@@ -23,16 +23,39 @@ def cmd_analyze(args):
     from core.pipeline.strategy_stage import StrategyPipeline
     from core.models import GenomicVariantInput
 
-    # If HGVS strings provided, parse them
+    # If HGVS strings provided, parse them and resolve to genomic coords
     if args.hgvs:
         from core.sequence.hgvs_parser import HGVSParser
+        from core.sequence.fetcher import TranscriptFetcher
         parser = HGVSParser()
+        fetcher = TranscriptFetcher()
+        # Fetch transcript once by gene symbol (works for any HGVS format)
+        try:
+            transcript = fetcher.fetch_by_gene(args.gene)
+            print(f"  Transcript: {transcript.transcript_id} ({transcript.gene_symbol})")
+        except Exception as e:
+            print(f"  ERROR fetching transcript for {args.gene}: {e}",
+                  file=sys.stderr)
+            sys.exit(1)
         variants = []
         for hgvs_str in args.hgvs:
             try:
-                v = parser.parse(hgvs_str, gene_symbol=args.gene)
+                parsed = parser.parse(hgvs_str)
+                # Map CDS position to genomic coordinate
+                genomic_pos = parser._cds_to_genomic(
+                    transcript, parsed.cds_position, parsed.intron_offset
+                )
+                v = GenomicVariantInput(
+                    chromosome=transcript.chromosome,
+                    position=genomic_pos,
+                    ref_allele=parsed.ref_allele,
+                    alt_allele=parsed.alt_allele,
+                    gene_symbol=args.gene,
+                    transcript_id=transcript.transcript_id,
+                    name=parsed.raw_notation,
+                )
                 variants.append(v)
-                print(f"  Parsed: {hgvs_str}")
+                print(f"  Parsed: {hgvs_str} -> chr{v.chromosome}:{v.position}")
             except ValueError as e:
                 print(f"  ERROR parsing '{hgvs_str}': {e}", file=sys.stderr)
                 sys.exit(1)
@@ -69,38 +92,34 @@ def cmd_analyze(args):
         print()
 
     # Print variant annotations
-    for nv in result.normalized_variants:
-        print(f"Variant: {nv.name}")
-        if nv.coding_annotation:
-            ca = nv.coding_annotation
-            print(f"  Consequence: {ca.consequence_type.value}")
+    for nv in result.variants:
+        print(f"Variant: {nv.input.name}")
+        if nv.coding:
+            ca = nv.coding
+            print(f"  Consequence: {ca.consequence.value}")
             if ca.hgvs_c:
                 print(f"  HGVS c.: {ca.hgvs_c}")
             if ca.hgvs_p:
                 print(f"  HGVS p.: {ca.hgvs_p}")
-        if nv.reference_validation:
-            rv = nv.reference_validation
+        if nv.ref_validation:
+            rv = nv.ref_validation
             status = "PASS" if rv.is_valid else "MISMATCH"
             print(f"  Ref validation: {status}")
         print()
 
     # Print strategy ranking
     print(f"Strategy Ranking (TOPSIS + sensitivity analysis):")
-    print(f"{'Rank':<6} {'Strategy':<35} {'Score':<8} {'Stability':<10} {'Safety':<8}")
+    print(f"{'Rank':<6} {'Strategy':<35} {'Score':<8} {'Evidence':<10} {'Safety':<8}")
     print("-" * 70)
     for s in result.strategies:
-        stability = f"{s.rank_stability:.1%}" if s.rank_stability is not None else "N/A"
+        evidence = s.strategy.evidence_tier.value if s.strategy.evidence_tier else "N/A"
         print(f"  #{s.rank:<4} {s.strategy_name:<35} {s.overall_score:<8.3f} "
-              f"{stability:<10} {s.safety_score:<8.2f}")
+              f"{evidence:<10} {s.safety_score:<8.2f}")
 
     if result.strategies:
         top = result.strategies[0]
         print(f"\nRecommendation: {top.strategy_name}")
-        if top.rank_stability is not None:
-            print(f"  Rank stability: {top.rank_stability:.1%} "
-                  f"(top-ranked in {top.rank_stability:.1%} of {10000} "
-                  f"weight permutations)")
-        print(f"  Evidence tier: {top.evidence_tier.value if top.evidence_tier else 'N/A'}")
+        print(f"  Evidence tier: {top.strategy.evidence_tier.value if top.strategy.evidence_tier else 'N/A'}")
 
     # Print rejected strategies
     if result.rejected_strategies:

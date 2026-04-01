@@ -97,6 +97,9 @@ class TranscriptMapper:
             self._cumulative_exon_bp.append(running)
             running += exon.length
 
+        # Compute 5'UTR offset: number of transcript bases before CDS start
+        self._utr5_offset = self._compute_utr5_offset()
+
     # ----- public API -------------------------------------------------------
 
     def map_genomic_to_transcript(
@@ -143,12 +146,9 @@ class TranscriptMapper:
         exon_tx_idx = exon.exon_number - 1
         transcript_pos = self._cumulative_exon_bp[exon_tx_idx] + offset_in_exon + 1
 
-        # Step 4: for now, treat transcript_pos as CDS position
-        # (a full implementation would account for 5'UTR offset, but for
-        # protein-coding transcripts fetched with CDS, position 1 = first
-        # coding base)
-        cds_pos = transcript_pos
-        in_cds = True
+        # Step 4: CDS position = transcript position minus 5'UTR offset
+        cds_pos = transcript_pos - self._utr5_offset
+        in_cds = cds_pos >= 1
 
         # Validate CDS position against CDS length
         if self.cds_sequence and cds_pos > len(self.cds_sequence):
@@ -201,6 +201,43 @@ class TranscriptMapper:
         )
 
     # ----- private helpers --------------------------------------------------
+
+    def _compute_utr5_offset(self) -> int:
+        """Compute the number of transcript bases in the 5'UTR.
+
+        Uses the CDS start/end boundaries from TranscriptInfo to determine
+        how many exonic bases precede the first coding position.
+        Returns 0 if CDS boundaries are not available.
+        """
+        tx = self.transcript
+        cds_start = getattr(tx, 'cds_start', None)
+        cds_end = getattr(tx, 'cds_end', None)
+        if cds_start is None or cds_end is None:
+            return 0
+
+        # On forward strand, CDS begins at cds_start (lowest genomic coord)
+        # On reverse strand, CDS begins at cds_end (highest genomic coord)
+        utr_bases = 0
+        for exon in tx.exons:  # already in transcript order
+            if tx.strand == 1:
+                # Forward: UTR is everything before cds_start
+                if exon.end < cds_start:
+                    utr_bases += exon.length  # entire exon is UTR
+                elif exon.start < cds_start:
+                    utr_bases += cds_start - exon.start  # partial UTR
+                    break
+                else:
+                    break  # past UTR
+            else:
+                # Reverse: UTR is everything above cds_end (5' end of transcript)
+                if exon.start > cds_end:
+                    utr_bases += exon.length  # entire exon is UTR
+                elif exon.end > cds_end:
+                    utr_bases += exon.end - cds_end  # partial UTR
+                    break
+                else:
+                    break  # past UTR
+        return utr_bases
 
     def _find_exon(self, genomic_pos: int) -> tuple:
         """Find the exon containing genomic_pos.

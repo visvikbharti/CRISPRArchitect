@@ -1,4 +1,4 @@
-# CRISPRArchitect v3 — Live Demo Script
+# CRISPRArchitect — Live Demo Script
 
 ## When to Use This
 
@@ -23,14 +23,16 @@ python cli.py analyze --gene COL7A1 --hgvs "NM_000094.4:c.5047C>T" --cell iPSC
 > "I'm giving it a COL7A1 nonsense variant — a C>T that creates a stop codon at position 1683. This causes epidermolysis bullosa. Let's see what the tool recommends."
 
 **Expected output highlights:**
-- Variant: COL7A1:c.5047C>T
-- Consequence: stop_gained (nonsense)
-- Top strategy: **Single-step Base Editing** (TOPSIS score ~0.98)
-- Pareto: non-dominated
-- Rank stability: >90%
+- Transcript: ENST00000681320 (COL7A1) — 119 exons, reverse strand
+- Parsed: NM_000094.4:c.5047C>T → chr3:48580586
+- Consequence: nonsense
+- HGVS c.: c.5047C>T, HGVS p.: p.Arg1683Ter
+- Ref validation: PASS
+- Top strategy: **Single-step Base Editing** (score ~0.983)
+- Evidence tier: A
 
 **What to say:**
-> "The tool recommends base editing — specifically ABE, because the reverse complement of this C>T mutation is a G>A, which ABE can correct. It scores 0.98 out of 1.0, with 90%+ rank stability. This means the recommendation holds under 9,000 out of 10,000 random weight combinations."
+> "The tool recommends base editing — specifically ABE, because the reverse complement of this C>T mutation is a G>A, which ABE can correct. It scores 0.983 out of 1.0 with evidence tier A. Prime editing is ranked second as a backup."
 
 ## Demo 2: Fetch a Gene (15 seconds)
 
@@ -57,23 +59,80 @@ python cli.py simulate --cell iPSC --nuclease enFnCas9 --donor cssDNA -n 10000
 This is directly relevant to the lab's SCD work and GMP/clinical trial.
 
 ```bash
-python cli.py analyze --gene HBB --hgvs "NM_000518.5:c.20A>T" --cell CD34_HSC
+python cli.py analyze --gene HBB --hgvs "NM_000518.5:c.20A>T" --cell HSC
 ```
+
+> **Note:** Use `--cell HSC` on the CLI. The webapp dropdown shows `CD34_HSC`.
 
 **What to say while it runs:**
 > "This is the classic sickle cell variant — HBB c.20A>T, the E6V transversion. Our lab is actively working on this. Let's see what CRISPRArchitect recommends."
 
 **Expected output highlights:**
-- Variant: HBB:c.20A>T (p.Glu7Val)
+- Transcript: ENST00000335295 (HBB) — 3 exons, reverse strand
+- Parsed: NM_000518.5:c.20A>T → chr11:5227002
 - Consequence: missense
-- Base editing: **REJECTED** — A>T is a transversion, neither ABE nor CBE can correct it
-- Top strategy: **Prime Editing** (PE can correct T back to A)
-- HDR: feasible but penalized for DSB in HSCs
+- HGVS c.: c.20A>T, HGVS p.: p.Glu7Val
+- Base editing: **NOT offered** — A>T is a transversion, neither ABE nor CBE can correct it
+- Top strategy: **Single-step Prime Editing** (score 1.000, evidence tier A)
+- HDR: ranked second, penalized for DSB requirement in HSCs
 
 **What to say:**
-> "The tool correctly rejects base editing — this is a transversion, not a transition. PE is recommended. Notice the delivery advisor now gives HSC-specific guidance: pre-stimulate with SCF/TPO/FLT3L, use nucleofection with mRNA, minimize culture to preserve stemness. This directly applies to our upcoming clinical work."
+> "The tool correctly excludes base editing — this is a transversion, not a transition. Prime editing is recommended with a perfect score. HDR is feasible but penalized because DSBs in HSCs carry higher toxicity risk. This directly applies to our upcoming clinical work."
 
 **Why this demo is powerful:** It connects CRISPRArchitect to the lab's own research program.
+
+---
+
+## Bonus Demos: If Someone Asks About a Specific Disease
+
+These are pre-tested and ready. Use them if the PI or audience asks "what about DMD?" or "does it work for thalassemia?"
+
+### DMD — Duchenne Muscular Dystrophy (30 seconds)
+
+```bash
+python cli.py analyze --gene DMD --hgvs "NM_004006.3:c.10108C>T" --cell iPSC
+```
+
+**What to say:**
+> "This is a DMD nonsense variant — C>T creating a premature stop codon. The tool recommends base editing with a score of 0.996. DMD is the largest human gene — 79 exons, 2.4 megabases — and CRISPRArchitect handles it correctly, resolving the CDS position to chrX."
+
+**Expected output:**
+- Transcript: ENST00000357033 (DMD) — 79 exons, chrX, reverse strand
+- Consequence: nonsense, p.Arg3370Ter
+- Top strategy: **Single-step Base Editing** (score 0.996, tier A)
+
+### Beta-Thalassemia — Codon 39 Nonsense (30 seconds)
+
+This is one of the most common beta-thal mutations worldwide (Mediterranean, Middle Eastern populations).
+
+```bash
+python cli.py analyze --gene HBB --hgvs "NM_000518.5:c.118C>T" --cell HSC
+```
+
+**What to say:**
+> "This is beta-thalassemia codon 39 — a C>T nonsense mutation, one of the most common worldwide. Since it's a C>T transition, base editing can directly correct it. The tool scores it 0.996 with tier A evidence."
+
+**Expected output:**
+- Consequence: nonsense, p.Gln40Ter
+- Top strategy: **Single-step Base Editing** (score 0.996, tier A)
+
+**Contrast with SCD demo:** Both are HBB mutations in HSCs, but the tool gives different recommendations — BE for beta-thal (transition) vs PE for SCD (transversion). This shows the tool is genuinely analyzing the variant, not just pattern-matching the gene.
+
+### Beta-Thalassemia — IVS-I-5 Splice Variant (30 seconds)
+
+The most common beta-thal mutation in the Indian subcontinent. Good to show if the PI asks about splice variants.
+
+```bash
+python cli.py analyze --gene HBB --hgvs "NM_000518.5:c.92+5G>C" --cell HSC
+```
+
+**What to say:**
+> "This is IVS-I-5 — a splice variant 5 bases into intron 1 of HBB. It's the most common beta-thalassemia mutation in India. The tool correctly identifies it as a splice_region variant, maps it to the intronic position chr11:5226925, and recommends prime editing since base editing cannot handle this G>C transversion."
+
+**Expected output:**
+- Parsed: c.92+5G>C → chr11:5226925 (intronic)
+- Consequence: splice_region
+- Top strategy: **Single-step Prime Editing** (score 1.000, tier A)
 
 ---
 
@@ -95,7 +154,7 @@ Opens http://localhost:8501
 
 **What to show:**
 - **Variant annotation card** — consequence, HGVS, ref validation
-- **TOPSIS ranking** — 6D scores, rank stability bars, Pareto badges
+- **TOPSIS ranking** — multi-dimensional scores, evidence tiers
 - **Delivery recommendations** — donor format, delivery method, viability tips
 - **Feasibility breakdown** — all nuclease-editor combinations tested
 
@@ -103,7 +162,7 @@ Opens http://localhost:8501
 > "Every ranked strategy gets delivery annotations. For this iPSC case, it recommends ssODN for the base editing strategy, warns about p53 toxicity if dsDNA were used, and suggests ROCK inhibitor and p53DD co-delivery for viability. These come from a survey of 87 verified references."
 
 ### For sickle cell in webapp
-- Gene: **HBB**, Chromosome: **11**, Position: **5227002**, Ref: **T**, Alt: **A**
+- Gene: **HBB**, Chromosome: **11**, Position: **5227002**, Ref: **A**, Alt: **T**
 - Cell type: **CD34_HSC**
 - Shows HSC-specific delivery guidance (pre-stimulation, HiFi Cas9, minimize culture)
 
@@ -115,6 +174,7 @@ See `APP_DEMO_WALKTHROUGH.md` for the full step-by-step webapp guide.
 
 - **Don't apologize for the terminal interface.** The CLI is a feature, not a limitation. It shows the tool is a real computational pipeline, not a pretty GUI wrapper.
 - **The webapp and CLI use the same pipeline.** Results are identical — the webapp just adds visualization.
+- **CLI uses `HSC`, webapp uses `CD34_HSC`.** Both map to the same cell type internally.
 - **If something fails** (Ensembl timeout, etc.): "The Ensembl API can be slow sometimes. Let me show you the pre-computed results instead." Then Alt+Tab to the figures.
 - **If someone asks about a gene and it doesn't work:** It might be because Ensembl's gene symbol doesn't match. Try the HGNC symbol. Common issues: GBA (renamed to GBA1 in Ensembl).
 - **Show the delivery section in the webapp.** It's the newest feature and demonstrates practical lab guidance.

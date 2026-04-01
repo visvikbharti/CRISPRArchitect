@@ -157,6 +157,8 @@ class TranscriptInfo:
     biotype: str                       # "protein_coding", etc.
     is_canonical: bool
     exons: List[ExonRecord]
+    cds_start: Optional[int] = None    # genomic CDS start (always <= cds_end)
+    cds_end: Optional[int] = None      # genomic CDS end
 
     @property
     def n_exons(self) -> int:

@@ -312,6 +312,11 @@ class TranscriptFetcher:
         tx_start = tx_data.get("start", 0)
         tx_end = tx_data.get("end", 0)
 
+        # Extract CDS boundaries from Translation object
+        translation = tx_data.get("Translation", {})
+        cds_start = translation.get("start")  # genomic, always <= cds_end
+        cds_end = translation.get("end")
+
         # Build sorted exon records
         raw_exons = tx_data.get("Exon", [])
         if not raw_exons:
@@ -350,6 +355,8 @@ class TranscriptFetcher:
             biotype=biotype,
             is_canonical=is_canonical,
             exons=exon_records,
+            cds_start=cds_start,
+            cds_end=cds_end,
         )
 
     def _rate_limit(self) -> None:

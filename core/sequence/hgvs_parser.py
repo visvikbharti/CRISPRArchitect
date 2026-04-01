@@ -298,6 +298,11 @@ class HGVSParser:
     def _cds_to_genomic(tx, cds_position: int, intron_offset: int = 0) -> int:
         """Map a CDS position to a genomic coordinate using transcript exons.
 
+        Accounts for UTR regions by clipping exons to CDS boundaries
+        (Translation start/end from Ensembl). For intronic offsets (e.g.,
+        c.92+5), the offset is applied from the nearest exon boundary
+        in the correct genomic direction for the strand.
+
         For forward-strand transcripts: walk exons 5'->3'.
         For reverse-strand: walk exons 3'->5' (reversed order).
         """
@@ -305,16 +310,47 @@ class HGVSParser:
         if tx.strand == -1:
             exons = list(reversed(exons))
 
+        cds_start = getattr(tx, 'cds_start', None)
+        cds_end = getattr(tx, 'cds_end', None)
+
         cds_bp_remaining = cds_position
         for exon in exons:
-            exon_length = exon.end - exon.start + 1
-            if cds_bp_remaining <= exon_length:
+            # Clip exon to CDS boundaries (exclude UTR)
+            ex_start = exon.start
+            ex_end = exon.end
+            if cds_start is not None:
+                ex_start = max(ex_start, cds_start)
+            if cds_end is not None:
+                ex_end = min(ex_end, cds_end)
+
+            cds_length = ex_end - ex_start + 1
+            if cds_length <= 0:
+                continue  # UTR-only exon, skip
+
+            if cds_bp_remaining <= cds_length:
                 if tx.strand == 1:
-                    genomic = exon.start + cds_bp_remaining - 1
+                    genomic = ex_start + cds_bp_remaining - 1
                 else:
-                    genomic = exon.end - cds_bp_remaining + 1
-                return genomic + intron_offset
-            cds_bp_remaining -= exon_length
+                    genomic = ex_end - cds_bp_remaining + 1
+
+                if intron_offset != 0:
+                    # Intronic offset: apply from the exon boundary
+                    # in the direction away from the exon
+                    if intron_offset > 0:
+                        # Past the 3' end of this exon (in transcript sense)
+                        if tx.strand == 1:
+                            genomic = ex_end + intron_offset
+                        else:
+                            genomic = ex_start - intron_offset
+                    else:
+                        # Before the 5' start of this exon (in transcript sense)
+                        if tx.strand == 1:
+                            genomic = ex_start + intron_offset
+                        else:
+                            genomic = ex_end - intron_offset
+
+                return genomic
+            cds_bp_remaining -= cds_length
 
         raise ValueError(
             f"CDS position {cds_position} exceeds transcript length "
