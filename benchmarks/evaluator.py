@@ -259,6 +259,7 @@ class BenchmarkEvaluator:
         transcript_id = d.get("transcript_id")
 
         for v in d.get("variants", []):
+            span = v.get("structural_span_bp")
             variants.append(
                 GenomicVariantInput(
                     chromosome=str(v["chromosome"]),
@@ -268,6 +269,7 @@ class BenchmarkEvaluator:
                     gene_symbol=gene_symbol,
                     transcript_id=transcript_id,
                     name=v.get("name", ""),
+                    structural_span_bp=int(span) if span is not None else None,
                 )
             )
 

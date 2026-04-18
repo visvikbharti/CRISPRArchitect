@@ -666,3 +666,208 @@ class TestGeneratorScorerIntegration:
             f"Ranks should be contiguous: expected {expected_ranks}, "
             f"got {actual_ranks}"
         )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Prime editing capability gate tests
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+class TestPrimeEditingCapabilityGate:
+    """Regression tests for the hard PE capability gate.
+
+    Motivated by the v3 benchmark: HDR-required large-deletion cases
+    (DMD, NF1, FBN1) had PE ranked first despite PE being incapable of
+    executing edits beyond its empirical ~50 bp single-pegRNA limit.
+    The gate rejects PE for such variants instead of silently ranking it.
+    """
+
+    @pytest.fixture
+    def generator(self):
+        return StrategyGenerator(p53_active=True)
+
+    def _variant_with_span(self, span_bp):
+        """Build a NormalizedVariant whose structural span is explicit."""
+        vi = GenomicVariantInput(
+            '1', 100, 'N', '-',
+            gene_symbol='TEST',
+            structural_span_bp=span_bp,
+        )
+        ti = TranscriptInfo(
+            'T1', 'TEST', 'G1', '1', 1, 1000, 1, 'protein_coding', True,
+            [ExonRecord('ENSE001', 1, 1, 1000, 1, '1')],
+        )
+        tc = TranscriptCoordinate(
+            100, 1, 100, 100, 34, 1, 'ATG', 'M', 99, 50, True,
+        )
+        ca = CodingAnnotation(consequence=ConsequenceType.INFRAME_DELETION)
+        rv = ReferenceValidation(True, 'N', 'N', 'N', 'N')
+        return NormalizedVariant(
+            input=vi, transcript=ti, transcript_coord=tc,
+            coding=ca, ref_validation=rv,
+        )
+
+    def test_pe_rejected_for_large_structural_deletion(self, generator):
+        """Variant with structural_span_bp > 50 → PE strategy is rejected."""
+        bundle = _make_bundle(
+            variant=self._variant_with_span(70),
+            pe_result=_make_pe_feasible(),
+            hdr_result=_make_hdr_feasible(),
+        )
+        strategies = generator.generate([bundle])
+        pe_strategies = [s for s in strategies if "Prime Editing" in s.name]
+        assert len(pe_strategies) == 1, (
+            "PE strategy should still be emitted (as rejected), "
+            "so users see it was considered. "
+            f"Got {[s.name for s in strategies]}"
+        )
+        assert pe_strategies[0].is_rejected, (
+            "PE strategy on a large deletion must be marked rejected."
+        )
+        reason = " ".join(pe_strategies[0].rejection_reasons).lower()
+        assert "exceed" in reason or "capability" in reason or "pegrna" in reason, (
+            f"Rejection reason should cite the capability limit. "
+            f"Got: {pe_strategies[0].rejection_reasons}"
+        )
+
+    def test_pe_kept_for_substitution(self, generator):
+        """Point substitution (1 bp) → PE strategy is kept (not rejected)."""
+        # Use a normal 1-bp substitution variant (no structural_span_bp)
+        bundle = _make_bundle(
+            variant=_make_variant(ref='C', alt='T'),
+            pe_result=_make_pe_feasible(),
+        )
+        strategies = generator.generate([bundle])
+        pe_strategies = [s for s in strategies if "Prime Editing" in s.name]
+        assert len(pe_strategies) == 1
+        assert not pe_strategies[0].is_rejected, (
+            "PE on a 1-bp substitution must not be gated. "
+            f"Rejection reasons: {pe_strategies[0].rejection_reasons}"
+        )
+
+    def test_pe_kept_at_threshold_boundary(self, generator):
+        """structural_span_bp == 50 (== threshold) → PE still kept."""
+        bundle = _make_bundle(
+            variant=self._variant_with_span(50),
+            pe_result=_make_pe_feasible(),
+        )
+        strategies = generator.generate([bundle])
+        pe_strategies = [s for s in strategies if "Prime Editing" in s.name]
+        assert len(pe_strategies) == 1
+        assert not pe_strategies[0].is_rejected, (
+            "PE at the 50-bp boundary must not be gated "
+            "(gate fires strictly above 50)."
+        )
+
+    def test_pe_rejected_just_above_threshold(self, generator):
+        """structural_span_bp == 51 (1 bp above threshold) → PE is rejected."""
+        bundle = _make_bundle(
+            variant=self._variant_with_span(51),
+            pe_result=_make_pe_feasible(),
+        )
+        strategies = generator.generate([bundle])
+        pe_strategies = [s for s in strategies if "Prime Editing" in s.name]
+        assert len(pe_strategies) == 1
+        assert pe_strategies[0].is_rejected
+
+    def test_pe_rejected_for_long_ref_allele(self, generator):
+        """Fallback path: long ref_allele (no structural_span_bp) → gated."""
+        vi = GenomicVariantInput(
+            '1', 100,
+            ref_allele='A' * 100, alt_allele='-',
+            gene_symbol='TEST',
+        )
+        ti = TranscriptInfo(
+            'T1', 'TEST', 'G1', '1', 1, 1000, 1, 'protein_coding', True,
+            [ExonRecord('ENSE001', 1, 1, 1000, 1, '1')],
+        )
+        tc = TranscriptCoordinate(
+            100, 1, 100, 100, 34, 1, 'ATG', 'M', 99, 50, True,
+        )
+        ca = CodingAnnotation(consequence=ConsequenceType.INFRAME_DELETION)
+        rv = ReferenceValidation(True, 'A' * 100, 'A' * 100, 'A' * 100, 'A' * 100)
+        variant = NormalizedVariant(
+            input=vi, transcript=ti, transcript_coord=tc,
+            coding=ca, ref_validation=rv,
+        )
+        bundle = _make_bundle(
+            variant=variant,
+            pe_result=_make_pe_feasible(),
+        )
+        strategies = generator.generate([bundle])
+        pe_strategies = [s for s in strategies if "Prime Editing" in s.name]
+        assert pe_strategies and pe_strategies[0].is_rejected, (
+            "Long explicit ref_allele should trigger the gate "
+            "even without structural_span_bp."
+        )
+
+    def test_rejected_pe_is_not_scored_or_ranked(self, generator):
+        """Rejected PE strategy should be excluded from ranker output."""
+        scorer = StrategyScorer()
+        bundle = _make_bundle(
+            variant=self._variant_with_span(200),
+            pe_result=_make_pe_feasible(),
+            hdr_result=_make_hdr_feasible(),
+        )
+        strategies = generator.generate([bundle])
+        ranked = scorer.rank(strategies, [bundle])
+        ranked_names = [r.strategy.name for r in ranked]
+        # Rejected PE must not appear in the ranked (scored) list
+        assert "Single-step Prime Editing" not in ranked_names, (
+            f"Rejected PE must not be scored/ranked. "
+            f"Ranked strategies: {ranked_names}"
+        )
+        # HDR should now be the top-ranked (only viable candidate here)
+        assert len(ranked) >= 1
+        assert "HDR" in ranked[0].strategy.name, (
+            f"With PE gated and no BE, HDR should be top-1. "
+            f"Got: {ranked[0].strategy.name}"
+        )
+
+    def test_dual_pe_skipped_when_either_variant_gated(self, generator):
+        """Two-mutation case: Dual PE is skipped if either variant exceeds gate."""
+        b1 = _make_bundle(
+            variant=self._variant_with_span(200),  # gated
+            mutation_index=0,
+            pe_result=_make_pe_feasible(),
+        )
+        b2 = _make_bundle(
+            variant=_make_variant(ref='G', alt='A', position=200),
+            mutation_index=1,
+            pe_result=_make_pe_feasible(),
+        )
+        strategies = generator.generate([b1, b2])
+        dual_pe = [s for s in strategies if s.name == "Dual Prime Editing"]
+        assert len(dual_pe) == 0, (
+            "Dual PE must not be generated when one variant is PE-gated."
+        )
+
+    def test_hybrid_pe_hdr_skipped_when_pe_target_is_gated(self, generator):
+        """Hybrid PE+HDR: skipped when the PE-target variant exceeds gate."""
+        b1 = _make_bundle(
+            variant=self._variant_with_span(200),  # gated — PE incapable
+            mutation_index=0,
+            pe_result=_make_pe_feasible(),
+            hdr_result=_make_hdr_feasible(),
+        )
+        b2 = _make_bundle(
+            variant=_make_variant(ref='G', alt='A', position=200),
+            mutation_index=1,
+            pe_result=_make_pe_feasible(),
+            hdr_result=_make_hdr_feasible(),
+        )
+        strategies = generator.generate([b1, b2])
+        # The hybrid with b1 as PE-target must not appear; the reverse
+        # direction (b2 as PE-target, b1 as HDR-target) is still allowed.
+        hybrid_pe_hdr = [
+            s for s in strategies if s.name == "Hybrid Prime Editing + HDR"
+        ]
+        for s in hybrid_pe_hdr:
+            # All remaining hybrids must have their PE step on b2 (index 1),
+            # not on the gated b1 (index 0).
+            pe_step = next(
+                st for st in s.steps if st.modality == EditModality.PE
+            )
+            assert pe_step.target_mutation_index == 1, (
+                "Hybrid PE+HDR must not assign PE to the gated variant."
+            )

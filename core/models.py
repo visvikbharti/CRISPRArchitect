@@ -227,6 +227,13 @@ class GenomicVariantInput:
     transcript_id: Optional[str] = None
     name: Optional[str] = None
     species: str = "homo_sapiens"
+    structural_span_bp: Optional[int] = None
+    # For large structural variants whose exact allele strings would be
+    # impractical to encode (e.g. whole-exon or multi-exon deletions), set
+    # this to the bp span of the affected region. Downstream capability
+    # gates (e.g. prime editing) read this in preference to len(ref/alt).
+    # Leave as None for point mutations and small indels; the span is then
+    # inferred from ref_allele / alt_allele lengths.
 
 
 @dataclass

@@ -465,7 +465,8 @@
           "position": 32305652,
           "ref_allele": "N",
           "alt_allele": "-",
-          "name": "exon 45 deletion (~180kb)"
+          "name": "exon 45 deletion (~180kb)",
+          "structural_span_bp": 180000
         }
       ],
       "cell_type": "iPSC",
@@ -496,7 +497,8 @@
           "position": 31245000,
           "ref_allele": "N",
           "alt_allele": "-",
-          "name": "c.3113_3182del (70bp deletion)"
+          "name": "c.3113_3182del (70bp deletion)",
+          "structural_span_bp": 70
         }
       ],
       "cell_type": "iPSC",
@@ -671,7 +673,8 @@
           "position": 48390000,
           "ref_allele": "N",
           "alt_allele": "-",
-          "name": "exon 26-28 deletion (~8kb)"
+          "name": "exon 26-28 deletion (~8kb)",
+          "structural_span_bp": 8000
         }
       ],
       "cell_type": "iPSC",

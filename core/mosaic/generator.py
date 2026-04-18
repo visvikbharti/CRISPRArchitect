@@ -40,6 +40,7 @@ from core.models import (
     FeasibilityLabel,
     HDRFeasibility,
     BaseEditingFeasibility,
+    NormalizedVariant,
     PrimeEditingFeasibility,
     RiskLevel,
     Strategy,
@@ -92,6 +93,71 @@ from core.mosaic.annotation_integration import AnnotationIntegrator
 # sensitivity analysis (10,000 weight permutations) explores how sensitive
 # the ranking is to these prior assumptions.
 # ═══════════════════════════════════════════════════════════════════════════
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Hard capability gates
+# ═══════════════════════════════════════════════════════════════════════════
+#
+# These encode hard biological/technical limits that cannot be overcome by
+# favourable PAM, window, or donor geometry. A variant exceeding a modality's
+# capability envelope is not a candidate for that modality regardless of
+# other scoring factors. This complements — not replaces — the soft priors
+# and feasibility results above: the soft priors rank among candidates that
+# are capable; the hard gates decide *what is a candidate at all*.
+#
+# Prime editing (single-pegRNA PE2/PE3):
+#   Insertions are bounded by RT-template length (empirically ≤40 bp;
+#   Anzalone et al., Nature, 2019). Deletions in the same RT-encoded
+#   regime extend to roughly ≤50 bp. Larger structural edits require
+#   twin-prime (e.g. PASTE; Anzalone et al., Nat Biotechnol, 2022) — a
+#   distinct editor construct, not single-pegRNA PE. The 50-bp threshold
+#   below is a conservative single-pegRNA cap.
+#
+# Base editing (ABE/CBE):
+#   Mutation-class (transition-only) and window-position limits are already
+#   enforced upstream via FeasibilityLabel.NOT_FEASIBLE, which causes the
+#   generator's existing `_is_rankable` guard to skip BE strategies
+#   automatically. No additional gate is needed at this layer.
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+PE_MAX_EDIT_SPAN_BP = 50
+
+
+def _compute_edit_span(variant: NormalizedVariant) -> int:
+    """Return the bp span of a variant's edit.
+
+    Prefers the explicit ``GenomicVariantInput.structural_span_bp`` when
+    present (for structural variants encoded with placeholder alleles).
+    Falls back to ``max(len(ref_allele), len(alt_allele))`` for normal
+    alleles. Always returns at least 1.
+    """
+    gvi = variant.input
+    if gvi.structural_span_bp is not None:
+        return max(1, int(gvi.structural_span_bp))
+    ref_len = 0 if gvi.ref_allele in ("-", "") else len(gvi.ref_allele)
+    alt_len = 0 if gvi.alt_allele in ("-", "") else len(gvi.alt_allele)
+    return max(ref_len, alt_len, 1)
+
+
+def _pe_capability_reject(variant: NormalizedVariant) -> Optional[str]:
+    """Return a rejection reason string if PE cannot execute this variant.
+
+    A non-None return means the variant's edit span exceeds the single-
+    pegRNA PE capability limit. Callers should emit PE as a rejected
+    strategy (or skip it in combined strategies).
+    """
+    span = _compute_edit_span(variant)
+    if span > PE_MAX_EDIT_SPAN_BP:
+        return (
+            f"Edit span {span} bp exceeds the single-pegRNA prime-editing "
+            f"capability limit of {PE_MAX_EDIT_SPAN_BP} bp "
+            f"(Anzalone et al., Nature, 2019; Chen et al., Cell, 2021). "
+            f"Large structural changes require HDR with a donor template "
+            f"or twin-prime / PASTE architectures."
+        )
+    return None
 
 
 class StrategyGenerator:
@@ -209,31 +275,64 @@ class StrategyGenerator:
         # --- Prime editing ---
         pe = bundle.prime_editing_result
         if pe and pe.label != FeasibilityLabel.NOT_FEASIBLE:
-            strategies.append(
-                self._make_single_edit_strategy(
-                    name="Single-step Prime Editing",
-                    mutation_index=bundle.mutation_index,
-                    modality=EditModality.PE,
-                    feasibility_results=[pe],
-                    num_dsbs=0,
-                    num_rounds=1,
-                    num_guides=1,
-                    num_proteins=1,
-                    num_donors=0,
-                    rearrangement_risk=RiskLevel.LOW,
-                    evidence_tier=EvidenceTier.A,
-                    bystander_severity=0.0,
-                    modality_prior_score=(
-                        0.82 if pe.label == FeasibilityLabel.FEASIBLE
-                        else 0.68
-                    ),
-                    included_reasons=[
-                        "Single-mutation correction is compatible "
-                        "with prime editing."
-                    ],
-                    penalties=_warnings_to_penalties(pe),
+            pe_reject = _pe_capability_reject(bundle.variant)
+            if pe_reject is not None:
+                strategies.append(
+                    Strategy(
+                        name="Single-step Prime Editing",
+                        steps=[
+                            StrategyStep(
+                                modality=EditModality.PE,
+                                target_mutation_index=bundle.mutation_index,
+                                donor_required=False,
+                                editor_name=pe.metadata.get(
+                                    "editor", "Prime Editor"
+                                ),
+                            ),
+                        ],
+                        num_dsbs=0,
+                        num_rounds=1,
+                        num_distinct_guides=1,
+                        num_distinct_proteins=1,
+                        num_donors=0,
+                        p53_active=self.p53_active,
+                        rearrangement_risk=RiskLevel.LOW,
+                        evidence_tier=EvidenceTier.A,
+                        feasibility_results=[pe],
+                        bystander_severity=0.0,
+                        donor_feasibility_score=1.0,
+                        modality_prior_score=0.0,
+                        included_reasons=[],
+                        penalties=_warnings_to_penalties(pe),
+                        rejection_reasons=[pe_reject],
+                    )
                 )
-            )
+            else:
+                strategies.append(
+                    self._make_single_edit_strategy(
+                        name="Single-step Prime Editing",
+                        mutation_index=bundle.mutation_index,
+                        modality=EditModality.PE,
+                        feasibility_results=[pe],
+                        num_dsbs=0,
+                        num_rounds=1,
+                        num_guides=1,
+                        num_proteins=1,
+                        num_donors=0,
+                        rearrangement_risk=RiskLevel.LOW,
+                        evidence_tier=EvidenceTier.A,
+                        bystander_severity=0.0,
+                        modality_prior_score=(
+                            0.82 if pe.label == FeasibilityLabel.FEASIBLE
+                            else 0.68
+                        ),
+                        included_reasons=[
+                            "Single-mutation correction is compatible "
+                            "with prime editing."
+                        ],
+                        penalties=_warnings_to_penalties(pe),
+                    )
+                )
 
         # --- HDR ---
         hdr = bundle.hdr_result
@@ -347,7 +446,12 @@ class StrategyGenerator:
             )
 
         # --- Dual prime editing ---
-        if _is_rankable(pe1) and _is_rankable(pe2):
+        pe_gated_b1 = _pe_capability_reject(b1.variant) is not None
+        pe_gated_b2 = _pe_capability_reject(b2.variant) is not None
+        if (
+            _is_rankable(pe1) and _is_rankable(pe2)
+            and not pe_gated_b1 and not pe_gated_b2
+        ):
             penalties = _warnings_to_penalties(pe1) + _warnings_to_penalties(pe2)
             strategies.append(
                 Strategy(
@@ -507,7 +611,8 @@ class StrategyGenerator:
         for pe_bundle, hdr_bundle in [(b1, b2), (b2, b1)]:
             pe = pe_bundle.prime_editing_result
             hdr = hdr_bundle.hdr_result
-            if _is_rankable(pe) and _is_rankable(hdr):
+            pe_gated = _pe_capability_reject(pe_bundle.variant) is not None
+            if _is_rankable(pe) and _is_rankable(hdr) and not pe_gated:
                 donor_score = _extract_donor_feasibility_score(hdr)
                 penalties = (
                     _warnings_to_penalties(pe)
