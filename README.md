@@ -76,7 +76,7 @@ flowchart TD
 | PE top-ranked | 29/30 (97%) | 23/30 (77%) |
 | HDR top-ranked | 1/30 (3%) | 1/30 (3%) |
 | Scoring method | 5D weighted sum | **6D TOPSIS + Pareto + Monte Carlo** |
-| Tests passing | 123 | **269** |
+| Tests passing | 123 | **290** |
 
 The multi-nuclease engine (ABE8e broader window + enFnCas9 NRG PAM) rescued base editing from 0% to 20% of cases. Later refactors (Fix #2, 2026-04-20) moved the bystander penalty from the Consequence dimension into the Safety dimension so that two DSB-free modalities with different bystander profiles are distinguishable on the safety axis.
 
@@ -99,8 +99,9 @@ Fix #1 added a hard capability gate for prime editing (PE rejected when a varian
 | **#1** — PE capability gate | 2026-04-18 | `core/mosaic/generator.py`, `core/models.py` | Top-1: 90.0% → **100.0%** (3 HDR cases resolved) |
 | **#2** — bystander into safety | 2026-04-20 | `core/pipeline/strategy_stage.py` `_score_safety` and `_compute_consequence_penalty` | No change — architectural refactor |
 | **#3** — rank-stability surfacing | 2026-04-20 | `cli.py`, `assess_stability` in `strategy_stage.py` | No change — output-only |
+| **#4** — compound-het completeness penalty | 2026-04-20 | `Strategy.completeness_ratio`, `COMPLETENESS_PENALTY_COEF` in `strategy_stage.py`, `_strategy_matches(n_variants)` in `benchmarks/evaluator.py` | See `FIX_NOTES_2026-04-20_fix4.md` — changes behaviour for compound-het cases only (closes the COL7A1 completeness gap per COL7A1_AUDIT §7 B+C) |
 
-Details: [FIX_NOTES_2026-04-18.md](FIX_NOTES_2026-04-18.md), [FIX_NOTES_2026-04-20.md](FIX_NOTES_2026-04-20.md), [FIX_NOTES_2026-04-20_fix3.md](FIX_NOTES_2026-04-20_fix3.md), [COL7A1_AUDIT_2026-04-19.md](COL7A1_AUDIT_2026-04-19.md).
+Details: [FIX_NOTES_2026-04-18.md](FIX_NOTES_2026-04-18.md), [FIX_NOTES_2026-04-20.md](FIX_NOTES_2026-04-20.md), [FIX_NOTES_2026-04-20_fix3.md](FIX_NOTES_2026-04-20_fix3.md), [FIX_NOTES_2026-04-20_fix4.md](FIX_NOTES_2026-04-20_fix4.md), [COL7A1_AUDIT_2026-04-19.md](COL7A1_AUDIT_2026-04-19.md).
 
 ## Architecture
 
@@ -227,7 +228,7 @@ crisprarchitect/
     utils/                         # Shared utilities and constants
     webapp/                        # Streamlit interactive app
     benchmarks/                    # Evaluation framework
-    tests/                         # 269 passing tests
+    tests/                         # 290 passing tests
     paper/                         # Manuscript and figures
     docs/                          # Documentation and guides
 ```

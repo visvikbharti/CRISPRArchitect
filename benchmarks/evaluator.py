@@ -125,7 +125,11 @@ def normalize_strategy_name(name: str) -> str:
     return lowered
 
 
-def _strategy_matches(strategy_name: str, labels: List[str]) -> bool:
+def _strategy_matches(
+    strategy_name: str,
+    labels: List[str],
+    n_variants: int = 1,
+) -> bool:
     """Check if a strategy name matches any of the truth labels.
 
     Uses both exact match on normalized names and fuzzy substring
@@ -137,15 +141,36 @@ def _strategy_matches(strategy_name: str, labels: List[str]) -> bool:
         Pipeline-produced strategy name (will be normalized).
     labels : list of str
         Truth label strings to match against.
+    n_variants : int
+        Number of pathogenic variants in the case. When ``>= 2`` (a
+        compound-heterozygous case), single-step strategy names are
+        rejected against truth labels containing "hybrid" or "sequential":
+        the pipeline's single-variant output is biologically incomplete
+        for a case whose intended truth is a multi-step strategy that
+        addresses both alleles. Introduced by Fix #4 (2026-04-20, Option
+        B from COL7A1_AUDIT_2026-04-19.md §7).
 
     Returns
     -------
     bool
     """
     normalized = normalize_strategy_name(strategy_name)
+    # Check the ORIGINAL name for "single-step" — the normalizer strips this
+    # prefix, so we capture it before normalization to drive the compound-het
+    # completeness guard.
+    raw = strategy_name.strip().lower()
+    is_single_step = raw.startswith("single-step") or raw.startswith("single step")
+    is_compound_case = n_variants >= 2
 
     for label in labels:
         ll = label.lower().strip()
+        # Compound-het completeness guard: a single-step strategy cannot
+        # satisfy a multi-step (hybrid / sequential) truth label, because
+        # it only addresses one of the two pathogenic variants.
+        if is_single_step and is_compound_case and (
+            "hybrid" in ll or "sequential" in ll
+        ):
+            continue
         # Exact match on normalized form
         if normalized == ll:
             return True
@@ -340,13 +365,16 @@ class BenchmarkEvaluator:
             acceptable = [s.lower() for s in truth.get("acceptable", [])]
             reject = [s.lower() for s in truth.get("reject", [])]
 
-            top1_correct = _strategy_matches(top_name, preferred + acceptable)
+            n_variants = len(case.variants) if hasattr(case, "variants") else 1
+            top1_correct = _strategy_matches(
+                top_name, preferred + acceptable, n_variants=n_variants
+            )
             top3_correct = any(
-                _strategy_matches(n, preferred + acceptable)
+                _strategy_matches(n, preferred + acceptable, n_variants=n_variants)
                 for n in top3_names
             )
             rejected_correctly = not any(
-                _strategy_matches(top_name, reject) for _ in [1]
+                _strategy_matches(top_name, reject, n_variants=n_variants) for _ in [1]
             )
 
             return BenchmarkResult(

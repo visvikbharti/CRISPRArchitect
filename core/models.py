@@ -520,6 +520,37 @@ class Strategy:
     def is_rejected(self) -> bool:
         return len(self.rejection_reasons) > 0
 
+    def addressed_variant_indices(self) -> set:
+        """Distinct variant indices this strategy addresses via its steps.
+
+        Each :class:`StrategyStep` carries a ``target_mutation_index`` that
+        points into the pipeline's variant list. The set of unique indices
+        across all steps is the set of variants the strategy resolves.
+        """
+        return {step.target_mutation_index for step in self.steps}
+
+    def completeness_ratio(self, total_variants: int) -> float:
+        """Fraction of pathogenic variants this strategy addresses.
+
+        For compound-heterozygous cases (``total_variants >= 2``), a single-
+        step strategy that targets only one variant returns ``1 / total``,
+        a two-step hybrid returns ``2 / total``, etc. For single-variant
+        cases (``total_variants <= 1``), returns 1.0 — the completeness
+        concept does not apply.
+
+        Introduced by Fix #4 (2026-04-20) for the compound-heterozygous
+        completeness penalty. See ``FIX_NOTES_2026-04-20_fix4.md``.
+        """
+        if total_variants <= 1:
+            return 1.0
+        if not self.steps:
+            return 0.0
+        addressed = {
+            i for i in self.addressed_variant_indices()
+            if isinstance(i, int) and 0 <= i < total_variants
+        }
+        return min(1.0, len(addressed) / total_variants)
+
 
 @dataclass
 class ScoredStrategy:

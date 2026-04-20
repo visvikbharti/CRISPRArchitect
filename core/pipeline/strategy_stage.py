@@ -86,6 +86,23 @@ RANK_STABILITY_STABLE = 0.70       # >= : single recommendation, note uncertaint
 DIMENSION_DELTA_MATERIAL = 0.05
 
 
+# ─── Compound-het completeness penalty (Fix #4, 2026-04-20) ──────────────
+# COMPLETENESS_PENALTY_COEF: coefficient applied to the safety score for a
+# strategy that addresses fewer than all pathogenic variants in a compound-
+# heterozygous case. Per COL7A1_AUDIT_2026-04-19.md §7 option C: a strategy
+# that resolves only 1 of N pathogenic variants is biologically incomplete
+# (the patient still has one diseased allele) and should rank below hybrid
+# or sequential strategies that address all N. The penalty enters safety
+# as ``base -= (1 - completeness_ratio) * COMPLETENESS_PENALTY_COEF``.
+#
+# The coefficient 0.30 is chosen to meaningfully separate incomplete
+# single-step strategies from complete hybrids without entirely vetoing
+# them (that would be a hard rejection, the wrong response when the user
+# may have a reason — e.g., staged therapy — to address one variant at
+# a time).
+COMPLETENESS_PENALTY_COEF = 0.30
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Scoring Engine
 # ═══════════════════════════════════════════════════════════════════════════
@@ -153,6 +170,20 @@ class StrategyScorer:
     ) -> ScoredStrategy:
         """Score a single strategy across all dimensions."""
         safety = self._score_safety(strategy)
+
+        # Fix #4 (2026-04-20): compound-het completeness penalty.
+        # A strategy addressing fewer than all pathogenic variants in a
+        # multi-variant case is biologically incomplete; it should rank
+        # below hybrid / sequential strategies that address all variants.
+        total_variants = len(bundles)
+        if total_variants > 1:
+            completeness = strategy.completeness_ratio(total_variants)
+            if completeness < 1.0:
+                safety = max(
+                    0.0,
+                    safety - (1.0 - completeness) * COMPLETENESS_PENALTY_COEF,
+                )
+
         feasibility = self._score_feasibility(strategy)
         complexity = self._score_complexity(strategy)
         risk = self._score_risk(strategy, bundles)
