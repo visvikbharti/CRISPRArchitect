@@ -58,6 +58,18 @@ from core.models import (
 logger = logging.getLogger(__name__)
 
 
+# ─── Safety-scoring constants ────────────────────────────────────────────
+# BYSTANDER_SAFETY_COEF: coefficient by which ``bystander_severity``
+# penalises the safety score. As of Fix #2 (2026-04-20), this coefficient
+# lives in the safety dimension; prior to Fix #2 the same coefficient was
+# applied inside ``_compute_consequence_penalty`` (the consequence TOPSIS
+# dimension), which created a safety ceiling at 1.0 for every 0-DSB
+# modality and made the bystander contribution difficult to explain in
+# the paper. See REVIEW_NOTES_2026-04-18.md §4.2 and
+# FIX_NOTES_2026-04-20.md for the refactor rationale.
+BYSTANDER_SAFETY_COEF = 0.08
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Scoring Engine
 # ═══════════════════════════════════════════════════════════════════════════
@@ -199,10 +211,12 @@ class StrategyScorer:
     # ─── Dimension scoring ───
 
     def _score_safety(self, s: Strategy) -> float:
-        """0-1 where 1 = safest (no DSBs, no rearrangement risk).
+        """0-1 where 1 = safest (no DSBs, no rearrangement risk, no bystanders).
 
         Safety scoring rationale
         -------------------------
+        Base score by DSB count:
+
         0 DSBs = 1.0 : Base editing and prime editing introduce no DSBs.
             No p53 activation, no translocation risk, no large deletions.
 
@@ -220,22 +234,39 @@ class StrategyScorer:
             p53 penalty: -0.1 (dual DSBs cause stronger p53 activation).
             Value rationale: 0.3 reflects that dual-DSB strategies produce
             viable, correctly-edited clones in <5% of attempts in iPSCs.
+
+        Bystander contribution (added 2026-04-20, Fix #2):
+
+        Bystander off-target edits reduce the safety score by
+        ``bystander_severity * BYSTANDER_SAFETY_COEF``. Before Fix #2, this
+        term lived as a post-hoc penalty in the separate ``consequence``
+        TOPSIS dimension (weight 0.08). It now lives in ``safety`` (weight
+        0.30) alongside DSB-derived risk, making safety a single principled
+        multi-criteria descriptor instead of a ceiling.
+
+        Side-effect: two DSB-free modalities with different bystander
+        profiles (e.g., ABE at a C-rich locus vs PE at the same locus)
+        now differ on the safety axis, which previously could not
+        distinguish them. This was the entire point of the refactor
+        per REVIEW_NOTES_2026-04-18.md §4.2.
         """
         if s.num_dsbs == 0:
-            return 1.0
-        if s.num_dsbs == 1 and not s.simultaneous_dsbs:
+            base = 1.0
+        elif s.num_dsbs == 1 and not s.simultaneous_dsbs:
             base = 0.6
             if s.p53_active:
                 base -= 0.1
-            return max(0.0, base)
-        if s.num_dsbs >= 2:
+        elif s.num_dsbs >= 2:
             base = 0.3
             if s.simultaneous_dsbs:
                 base -= 0.1
             if s.p53_active:
                 base -= 0.1
-            return max(0.0, base)
-        return 0.5
+        else:
+            base = 0.5
+
+        base -= s.bystander_severity * BYSTANDER_SAFETY_COEF
+        return max(0.0, base)
 
     def _score_feasibility(self, s: Strategy) -> float:
         """0-1 based on modality prior score and donor quality."""
@@ -320,7 +351,16 @@ class StrategyScorer:
     def _compute_consequence_penalty(
         self, s: Strategy, bundles: List[FeasibilityBundle]
     ) -> float:
-        """Penalty for splice-proximal edits or damaging bystanders."""
+        """Penalty for splice-proximal edits.
+
+        As of 2026-04-20 (Fix #2 per REVIEW_NOTES_2026-04-18.md §4.2),
+        bystander severity has been moved from this penalty into the
+        ``safety`` dimension (see ``_score_safety``). This function now
+        captures only splice-proximity consequences — it remains the
+        source of the ``consequence`` TOPSIS dimension, which is still
+        meaningful because splice-site effects are an editing-outcome
+        consequence distinct from the safety / rearrangement axis.
+        """
         penalty = 0.0
 
         for bundle in bundles:
@@ -329,9 +369,6 @@ class StrategyScorer:
                 penalty += 0.05
             elif v.coding.splice_proximity == "near_exon_end":
                 penalty += 0.05
-
-        # Bystander severity is already encoded in the strategy
-        penalty += s.bystander_severity * 0.08
 
         return min(0.3, penalty)  # cap total penalty
 
