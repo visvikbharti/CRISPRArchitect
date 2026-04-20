@@ -76,19 +76,31 @@ flowchart TD
 | PE top-ranked | 29/30 (97%) | 23/30 (77%) |
 | HDR top-ranked | 1/30 (3%) | 1/30 (3%) |
 | Scoring method | 5D weighted sum | **6D TOPSIS + Pareto + Monte Carlo** |
-| Tests passing | 123 | **198** |
+| Tests passing | 123 | **269** |
 
-The multi-nuclease engine (ABE8e broader window + enFnCas9 NRG PAM) rescued base editing from 0% to 20% of cases. The bystander triple-counting bug in v2 was fixed by moving bystander severity to a dedicated Consequence dimension.
+The multi-nuclease engine (ABE8e broader window + enFnCas9 NRG PAM) rescued base editing from 0% to 20% of cases. Later refactors (Fix #2, 2026-04-20) moved the bystander penalty from the Consequence dimension into the Safety dimension so that two DSB-free modalities with different bystander profiles are distinguishable on the safety axis.
 
 ## Benchmark Results
 
 Evaluated on 30 ClinVar cases with verified GRCh38 coordinates:
 
-| Metric | v2 | v3 |
-|--------|----|----|
-| Top-1 Accuracy | 86.7% (26/30) | 86.7% (26/30) |
-| Top-3 Accuracy | 96.7% (29/30) | 96.7% (29/30) |
-| Rejection Accuracy | 90.0% (27/30) | 86.7% (26/30) |
+| Metric | v2 | v3 | v3 + Fix #1 (2026-04-18) |
+|--------|----|----|----|
+| Top-1 Accuracy | 86.7% (26/30) | 90.0% (27/30) | **100.0% (30/30)** |
+| Top-3 Accuracy | 96.7% (29/30) | 100.0% (30/30) | **100.0% (30/30)** |
+| Rejection Accuracy | 90.0% (27/30) | 86.7% (26/30) | 96.7% (29/30) |
+
+Fix #1 added a hard capability gate for prime editing (PE rejected when a variant's edit span exceeds 50 bp), resolving three HDR-required cases (DMD, NF1, FBN1). Fix #2 (bystander → safety refactor) and Fix #3 (rank-stability surfacing in the CLI) are rank-preserving — they do not change the benchmark numbers.
+
+## Recent improvements (2026-04)
+
+| Fix | Date | Scope | Effect on benchmark |
+|---|---|---|---|
+| **#1** — PE capability gate | 2026-04-18 | `core/mosaic/generator.py`, `core/models.py` | Top-1: 90.0% → **100.0%** (3 HDR cases resolved) |
+| **#2** — bystander into safety | 2026-04-20 | `core/pipeline/strategy_stage.py` `_score_safety` and `_compute_consequence_penalty` | No change — architectural refactor |
+| **#3** — rank-stability surfacing | 2026-04-20 | `cli.py`, `assess_stability` in `strategy_stage.py` | No change — output-only |
+
+Details: [FIX_NOTES_2026-04-18.md](FIX_NOTES_2026-04-18.md), [FIX_NOTES_2026-04-20.md](FIX_NOTES_2026-04-20.md), [FIX_NOTES_2026-04-20_fix3.md](FIX_NOTES_2026-04-20_fix3.md), [COL7A1_AUDIT_2026-04-19.md](COL7A1_AUDIT_2026-04-19.md).
 
 ## Architecture
 
@@ -175,12 +187,27 @@ python -m pytest tests/ -v
 
 | Dimension | Weight | Type | What it captures |
 |-----------|--------|------|------------------|
-| Safety | 0.28 | Benefit | DSB count, p53 risk in iPSCs |
+| Safety | 0.28 | Benefit | DSB count, p53 risk in iPSCs, bystander off-target edits (via `BYSTANDER_SAFETY_COEF` since Fix #2, 2026-04-20) |
 | Feasibility | 0.23 | Benefit | PAM + window verified, modality prior |
 | Complexity | 0.19 | Cost | Rounds, donors, guides, screening |
 | Risk | 0.14 | Cost | Structural rearrangement only |
 | Confidence | 0.09 | Benefit | Evidence tier (A/B/C) |
-| Consequence | 0.07 | Benefit | Bystander edits, splice proximity |
+| Consequence | 0.07 | Benefit | Splice proximity only (bystanders moved to Safety in Fix #2) |
+
+Weights shown are normalized (raw weights 0.30 / 0.25 / 0.20 / 0.15 / 0.10 / 0.08 sum to 1.08 and are divided by the total at construction time in `TOPSISScorer.__init__`). Pass explicit `w_*` arguments to override.
+
+### Rank-stability interpretation (Fix #3, 2026-04-20)
+
+Every recommendation is accompanied by a rank-stability score — the fraction of 10,000 Monte-Carlo weight perturbations under which the top-ranked strategy retains rank 1. The CLI interprets this via pre-committed thresholds:
+
+| Level | Range | CLI behaviour |
+|---|---|---|
+| **robust** | ≥ 0.80 | Unconditional recommendation |
+| **stable** | [0.70, 0.80) | Single recommendation with uncertainty note |
+| **flip-sensitive** | < 0.70 | Surface runner-up modality, TOPSIS-score gap, and per-dimension tradeoff |
+| **unknown** | sensitivity disabled | N/A |
+
+See `assess_stability` in `core/pipeline/strategy_stage.py`.
 
 ## Project Structure
 
@@ -200,7 +227,7 @@ crisprarchitect/
     utils/                         # Shared utilities and constants
     webapp/                        # Streamlit interactive app
     benchmarks/                    # Evaluation framework
-    tests/                         # 198 passing tests
+    tests/                         # 269 passing tests
     paper/                         # Manuscript and figures
     docs/                          # Documentation and guides
 ```
