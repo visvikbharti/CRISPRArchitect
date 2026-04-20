@@ -118,12 +118,51 @@ def cmd_analyze(args):
               f"{stability:<12} {evidence:<10} {s.safety_score:<8.2f}")
 
     if result.strategies:
+        from core.pipeline.strategy_stage import (
+            RANK_STABILITY_ROBUST,
+            RANK_STABILITY_STABLE,
+            assess_stability,
+        )
+
         top = result.strategies[0]
+        assessment = assess_stability(result.strategies)
+
         print(f"\nRecommendation: {top.strategy_name}")
         print(f"  Evidence tier: {top.strategy.evidence_tier.value if top.strategy.evidence_tier else 'N/A'}")
+
         if top.rank_stability is not None:
-            print(f"  Rank stability: {top.rank_stability:.1%} "
-                  f"(top-ranked in {top.rank_stability:.1%} of 10,000 weight permutations)")
+            print(
+                f"  Rank stability: {top.rank_stability:.1%} — {assessment.human_label} "
+                f"(top-ranked in {top.rank_stability:.1%} of 10,000 weight permutations)"
+            )
+            if assessment.level == "robust":
+                print(
+                    f"    Above {RANK_STABILITY_ROBUST:.0%} threshold: unconditional recommendation."
+                )
+            elif assessment.level == "stable":
+                print(
+                    f"    In [{RANK_STABILITY_STABLE:.0%}, {RANK_STABILITY_ROBUST:.0%}): single "
+                    f"recommendation but weight perturbations sometimes promote alternatives."
+                )
+            elif assessment.is_flip_sensitive and assessment.runner_up is not None:
+                ru = assessment.runner_up
+                gap = assessment.score_gap or 0.0
+                print(
+                    f"    Below {RANK_STABILITY_STABLE:.0%}: the choice between top and alternative "
+                    f"depends on context. Consider the tradeoff below."
+                )
+                print(f"\n  Alternative considered: {ru.strategy_name}")
+                if ru.rank_stability is not None:
+                    print(f"    Alternative stability: {ru.rank_stability:.1%}")
+                print(
+                    f"    TOPSIS score gap: {gap:+.3f} "
+                    f"(top = {top.overall_score:.3f}, alt = {ru.overall_score:.3f})"
+                )
+                print(f"\n  Why each might be preferred:")
+                for line in assessment.preferential_reasoning:
+                    print(f"    - {line}")
+        else:
+            print(f"  Rank stability: not computed (sensitivity analysis disabled).")
 
     # Print feasibility details (which specific editors were evaluated)
     if result.bundles:

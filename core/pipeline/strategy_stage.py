@@ -70,6 +70,22 @@ logger = logging.getLogger(__name__)
 BYSTANDER_SAFETY_COEF = 0.08
 
 
+# ─── Rank-stability thresholds (Fix #3, 2026-04-20) ──────────────────────
+# Pre-committed per REVIEW_NOTES_2026-04-18.md §4.3: a TOPSIS recommendation
+# whose rank is sensitive to weight perturbation is exactly the case where
+# the tool earns its keep (vs a user who would have picked the obvious
+# answer by inspection). These thresholds define when to print the
+# runner-up and the dimension-level tradeoff.
+RANK_STABILITY_ROBUST = 0.80       # >= : unconditional recommendation
+RANK_STABILITY_STABLE = 0.70       # >= : single recommendation, note uncertainty
+# < RANK_STABILITY_STABLE : "flip-sensitive" — surface alternatives.
+
+# Dimension-delta threshold for surfacing in flip-sensitive explanations.
+# A delta smaller than this between top and runner-up on a given dimension
+# is considered a tie (not a meaningful preference signal).
+DIMENSION_DELTA_MATERIAL = 0.05
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # Scoring Engine
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1421,6 +1437,167 @@ def _minimal_normalize(
         transcript_coord=coord,
         coding=coding,
         ref_validation=ref_val,
+    )
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Rank-stability assessment (Fix #3, 2026-04-20)
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+@dataclass
+class DimensionDelta:
+    """One dimension's top-vs-runner-up comparison."""
+
+    name: str
+    top_value: float
+    runner_up_value: float
+    delta: float           # top - runner_up (signed)
+    direction: str         # "benefit" (higher better) or "cost" (lower better)
+    prefers: Optional[str] # "top" | "runner_up" | None (tie)
+
+
+@dataclass
+class StabilityAssessment:
+    """Interpretation of a top-ranked strategy's rank_stability.
+
+    ``level`` is one of:
+      - ``"robust"``      — rank_stability >= RANK_STABILITY_ROBUST
+      - ``"stable"``      — in [RANK_STABILITY_STABLE, RANK_STABILITY_ROBUST)
+      - ``"flip_sensitive"`` — < RANK_STABILITY_STABLE
+      - ``"unknown"``     — sensitivity analysis not run (None)
+
+    ``runner_up``, ``score_gap``, ``dimension_deltas`` and
+    ``preferential_reasoning`` are only populated when ``level ==
+    "flip_sensitive"`` and at least one alternative strategy exists.
+    """
+
+    level: str
+    top: ScoredStrategy
+    runner_up: Optional[ScoredStrategy] = None
+    score_gap: Optional[float] = None
+    dimension_deltas: List[DimensionDelta] = field(default_factory=list)
+    preferential_reasoning: List[str] = field(default_factory=list)
+
+    @property
+    def is_flip_sensitive(self) -> bool:
+        return self.level == "flip_sensitive"
+
+    @property
+    def human_label(self) -> str:
+        return {
+            "robust": "ROBUST",
+            "stable": "STABLE",
+            "flip_sensitive": "FLIP-SENSITIVE",
+            "unknown": "UNKNOWN (sensitivity analysis not run)",
+        }.get(self.level, self.level.upper())
+
+
+def _classify_stability_level(rank_stability: Optional[float]) -> str:
+    """Map a rank_stability probability to a categorical level."""
+    if rank_stability is None:
+        return "unknown"
+    if rank_stability >= RANK_STABILITY_ROBUST:
+        return "robust"
+    if rank_stability >= RANK_STABILITY_STABLE:
+        return "stable"
+    return "flip_sensitive"
+
+
+def _dimension_comparison(
+    top: ScoredStrategy, runner_up: ScoredStrategy
+) -> List[DimensionDelta]:
+    """Compute per-dimension deltas between top and runner-up scores."""
+    # Dimension direction: whether higher = better.
+    specs = [
+        ("safety",      top.safety_score,      runner_up.safety_score,      "benefit"),
+        ("feasibility", top.feasibility_score, runner_up.feasibility_score, "benefit"),
+        ("complexity",  top.complexity_score,  runner_up.complexity_score,  "cost"),
+        ("risk",        top.risk_score,        runner_up.risk_score,        "cost"),
+        ("confidence",  top.confidence_score,  runner_up.confidence_score,  "benefit"),
+    ]
+    out: List[DimensionDelta] = []
+    for name, tv, rv, direction in specs:
+        delta = tv - rv
+        if abs(delta) < DIMENSION_DELTA_MATERIAL:
+            prefers: Optional[str] = None
+        elif direction == "benefit":
+            prefers = "top" if delta > 0 else "runner_up"
+        else:  # cost: lower is better
+            prefers = "top" if delta < 0 else "runner_up"
+        out.append(
+            DimensionDelta(
+                name=name,
+                top_value=tv,
+                runner_up_value=rv,
+                delta=delta,
+                direction=direction,
+                prefers=prefers,
+            )
+        )
+    return out
+
+
+def _preferential_reasoning(
+    top: ScoredStrategy,
+    runner_up: ScoredStrategy,
+    deltas: List[DimensionDelta],
+) -> List[str]:
+    """Human-readable lines explaining why each strategy might be preferred."""
+    top_wins = [d for d in deltas if d.prefers == "top"]
+    runner_up_wins = [d for d in deltas if d.prefers == "runner_up"]
+
+    lines: List[str] = []
+    if top_wins:
+        dims = ", ".join(
+            f"{d.name} ({d.top_value:.2f} vs {d.runner_up_value:.2f})"
+            for d in top_wins
+        )
+        lines.append(f"{top.strategy_name} wins on: {dims}")
+    if runner_up_wins:
+        dims = ", ".join(
+            f"{d.name} ({d.top_value:.2f} vs {d.runner_up_value:.2f})"
+            for d in runner_up_wins
+        )
+        lines.append(f"{runner_up.strategy_name} wins on: {dims}")
+    if not top_wins and not runner_up_wins:
+        lines.append(
+            "No material dimension differences — the top ordering is driven "
+            "by fine-grained score differences only. Either choice is "
+            "defensible in this context."
+        )
+    return lines
+
+
+def assess_stability(strategies: List[ScoredStrategy]) -> Optional[StabilityAssessment]:
+    """Interpret a ranked strategy list's top-strategy rank stability.
+
+    Returns ``None`` if the list is empty. If ``rank_stability`` is ``None``
+    on the top strategy, returns an assessment with ``level="unknown"``.
+
+    Flip-sensitive assessments include the runner-up strategy, its score
+    gap from the top, a per-dimension delta list, and human-readable
+    ``preferential_reasoning`` lines suitable for printing in the CLI or
+    rendering in the webapp.
+    """
+    if not strategies:
+        return None
+    top = strategies[0]
+    level = _classify_stability_level(top.rank_stability)
+
+    if level != "flip_sensitive" or len(strategies) < 2:
+        return StabilityAssessment(level=level, top=top)
+
+    runner_up = strategies[1]
+    deltas = _dimension_comparison(top, runner_up)
+    reasoning = _preferential_reasoning(top, runner_up, deltas)
+    return StabilityAssessment(
+        level=level,
+        top=top,
+        runner_up=runner_up,
+        score_gap=top.overall_score - runner_up.overall_score,
+        dimension_deltas=deltas,
+        preferential_reasoning=reasoning,
     )
 
 
