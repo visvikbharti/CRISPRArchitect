@@ -21,7 +21,12 @@ _V3_AVAILABLE = False
 _V3_IMPORT_ERROR = ""
 
 try:
-    from core.pipeline.strategy_stage import StrategyPipeline
+    from core.pipeline.strategy_stage import (
+        StrategyPipeline,
+        RANK_STABILITY_ROBUST,
+        RANK_STABILITY_STABLE,
+        assess_stability,
+    )
     from core.models import (
         GenomicVariantInput,
         PipelineResult,
@@ -371,6 +376,22 @@ def _display_strategy_ranking(result: PipelineResult) -> None:
             f'{scores_html}</div>'
         )
 
+        # Fix #4 (2026-04-20): compound-het completeness indicator.
+        n_variants = len(result.bundles) if result.bundles else 1
+        if n_variants > 1:
+            completeness = s.completeness_ratio(n_variants)
+            if completeness < 1.0:
+                details.append(
+                    f"<span style='color:#E67E22;'>⚠ Incomplete "
+                    f"({int(completeness * n_variants)}/{n_variants} variants)"
+                    f"</span>"
+                )
+            else:
+                details.append(
+                    f"<span style='color:#1B9E77;'>✓ Addresses all "
+                    f"{n_variants} variants</span>"
+                )
+
         # Details
         if details:
             html += (
@@ -387,6 +408,154 @@ def _display_strategy_ranking(result: PipelineResult) -> None:
 
         html += '</div>'
         st.markdown(html, unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------------------------
+# Display: Recommendation Interpretation (Fix #3 rank-stability surfacing)
+# ---------------------------------------------------------------------------
+def _display_stability_assessment(result: PipelineResult) -> None:
+    """Render the rank-stability interpretation block for the top-1 pick.
+
+    Mirrors Fix #3's CLI output. For robust / stable cases emits a single
+    compact card. For flip-sensitive cases emits the card plus a runner-up
+    panel with the TOPSIS-score gap and a per-dimension tradeoff table.
+
+    No-op if fewer than 2 ranked strategies exist or sensitivity analysis
+    was disabled (``rank_stability is None``).
+    """
+    if not result.strategies or len(result.strategies) < 1:
+        return
+    assessment = assess_stability(result.strategies)
+    if assessment is None or assessment.level == "unknown":
+        return
+
+    level = assessment.level
+    top = assessment.top
+
+    level_palette = {
+        "robust": ("#1B9E77", "ROBUST",
+                   f"Above {RANK_STABILITY_ROBUST:.0%} threshold: unconditional recommendation."),
+        "stable": ("#FFC107", "STABLE",
+                   f"Within [{RANK_STABILITY_STABLE:.0%}, {RANK_STABILITY_ROBUST:.0%}): "
+                   f"single recommendation but weight perturbations sometimes promote "
+                   f"alternatives."),
+        "flip_sensitive": ("#E67E22", "FLIP-SENSITIVE",
+                           f"Below {RANK_STABILITY_STABLE:.0%}: the choice depends on your context. "
+                           f"Consider the tradeoff below."),
+    }
+    color, label, explanation = level_palette.get(level, ("#757575", level.upper(), ""))
+    pct = (top.rank_stability or 0.0) * 100
+
+    st.markdown(
+        '<div class="section-header">Recommendation Interpretation</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        f'<div style="border-left:4px solid {color}; '
+        f'background:var(--card-bg, #233448); padding:12px 16px; '
+        f'border-radius:6px; margin-bottom:10px;">'
+        f'<div style="display:flex; justify-content:space-between; align-items:center; '
+        f'flex-wrap:wrap; gap:6px;">'
+        f'<div>'
+        f'<strong style="font-size:1.1em; color:var(--text-color,#E0E0E0);">'
+        f'{top.strategy_name}</strong>'
+        f' <span style="background:{color}; color:white; padding:1px 8px; '
+        f'border-radius:8px; font-size:0.72em; font-weight:700; margin-left:6px;">'
+        f'{label}</span>'
+        f'</div>'
+        f'<div style="font-size:0.9em; color:var(--text-color,#E0E0E0);">'
+        f'Rank stability: <strong>{pct:.1f}%</strong>'
+        f'</div>'
+        f'</div>'
+        f'<div style="font-size:0.85em; opacity:0.75; margin-top:6px;">'
+        f'{explanation}'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    if not assessment.is_flip_sensitive or assessment.runner_up is None:
+        return
+
+    ru = assessment.runner_up
+    gap = assessment.score_gap or 0.0
+    ru_stability_pct = (ru.rank_stability or 0.0) * 100
+
+    # Runner-up header
+    st.markdown(
+        f'<div style="border-left:4px solid #455A64; '
+        f'background:var(--card-bg, #1F2D3D); padding:12px 16px; '
+        f'border-radius:6px; margin-bottom:10px;">'
+        f'<div style="display:flex; justify-content:space-between; align-items:center; '
+        f'flex-wrap:wrap; gap:6px;">'
+        f'<div>'
+        f'<span style="opacity:0.7;">Alternative considered:</span> '
+        f'<strong style="font-size:1.05em; color:var(--text-color,#E0E0E0);">'
+        f'{ru.strategy_name}</strong>'
+        f'</div>'
+        f'<div style="font-size:0.85em; color:var(--text-color,#E0E0E0);">'
+        f'Stability: <strong>{ru_stability_pct:.1f}%</strong> &nbsp;·&nbsp; '
+        f'Gap: <strong>{gap:+.3f}</strong> '
+        f'<span style="opacity:0.7;">(top {top.overall_score:.3f} vs alt {ru.overall_score:.3f})</span>'
+        f'</div>'
+        f'</div>'
+        f'</div>',
+        unsafe_allow_html=True,
+    )
+
+    # Dimension tradeoff table
+    rows = []
+    for d in assessment.dimension_deltas:
+        if d.prefers == "top":
+            badge = (
+                f'<span style="background:#1B9E77; color:white; padding:1px 6px; '
+                f'border-radius:8px; font-size:0.7em;">{top.strategy_name} wins</span>'
+            )
+        elif d.prefers == "runner_up":
+            badge = (
+                f'<span style="background:#E67E22; color:white; padding:1px 6px; '
+                f'border-radius:8px; font-size:0.7em;">{ru.strategy_name} wins</span>'
+            )
+        else:
+            badge = (
+                '<span style="background:#757575; color:white; padding:1px 6px; '
+                'border-radius:8px; font-size:0.7em;">tie</span>'
+            )
+        rows.append(
+            f'<tr>'
+            f'<td style="padding:4px 8px;">{d.name.title()}</td>'
+            f'<td style="padding:4px 8px; text-align:right;">{d.top_value:.2f}</td>'
+            f'<td style="padding:4px 8px; text-align:right;">{d.runner_up_value:.2f}</td>'
+            f'<td style="padding:4px 8px; text-align:right;">{d.delta:+.2f}</td>'
+            f'<td style="padding:4px 8px;">{badge}</td>'
+            f'</tr>'
+        )
+
+    table_html = (
+        '<div style="margin-bottom:12px; padding:0 8px;">'
+        '<div style="font-size:0.85em; opacity:0.7; margin-bottom:4px;">'
+        'Per-dimension tradeoff (material threshold: 0.05):'
+        '</div>'
+        '<table style="width:100%; font-size:0.85em; border-collapse:collapse;">'
+        '<thead><tr style="opacity:0.6; border-bottom:1px solid #455A64;">'
+        '<th style="text-align:left; padding:4px 8px;">Dimension</th>'
+        f'<th style="text-align:right; padding:4px 8px;">{top.strategy_name}</th>'
+        f'<th style="text-align:right; padding:4px 8px;">{ru.strategy_name}</th>'
+        '<th style="text-align:right; padding:4px 8px;">Δ</th>'
+        '<th style="text-align:left; padding:4px 8px;">Prefers</th>'
+        '</tr></thead>'
+        f'<tbody>{"".join(rows)}</tbody>'
+        '</table></div>'
+    )
+    st.markdown(table_html, unsafe_allow_html=True)
+
+    # Preferential reasoning lines (human-readable summary)
+    if assessment.preferential_reasoning:
+        reasoning_html = '<ul style="font-size:0.85em; margin:4px 8px; padding-left:20px;">'
+        for line in assessment.preferential_reasoning:
+            reasoning_html += f'<li>{line}</li>'
+        reasoning_html += '</ul>'
+        st.markdown(reasoning_html, unsafe_allow_html=True)
 
 
 # ---------------------------------------------------------------------------
@@ -703,6 +872,9 @@ def page_v3_analysis() -> None:
 
     # Strategy ranking
     _display_strategy_ranking(result)
+
+    # Recommendation interpretation (Fix #3 — rank-stability surfacing)
+    _display_stability_assessment(result)
 
     # Delivery advisor annotations
     _display_delivery_advisory(result)
